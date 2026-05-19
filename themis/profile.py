@@ -10,7 +10,7 @@ import importlib
 import sys
 
 from .utils import ensure_dir
-from . import ganon_wrapper, ggcat_wrapper
+from . import ganon_wrapper, ggcat_wrapper, fast_ganon
 
 
 def _ts(mod: str):
@@ -111,6 +111,11 @@ def run(
     r1_topk_large=3,
     r1_min_abundance=0.0,
     species_min_abundance=0.0,
+    ggcat_temp_dir=None,
+    ggcat_memory=None,
+    ggcat_prefer_memory=False,
+    ggcat_disk_optimization_level=None,
+    ggcat_intermediate_compression_level=None,
 ):
     
     out_prefix = Path(out_prefix).absolute()
@@ -126,6 +131,11 @@ def run(
             threads=threads,
             k=k,
             species_min_abundance=species_min_abundance,
+            ggcat_temp_dir=ggcat_temp_dir,
+            ggcat_memory=ggcat_memory,
+            ggcat_prefer_memory=ggcat_prefer_memory,
+            ggcat_disk_optimization_level=ggcat_disk_optimization_level,
+            ggcat_intermediate_compression_level=ggcat_intermediate_compression_level,
         )
     else:
         return run_paired(
@@ -143,6 +153,11 @@ def run(
             r1_topk_large=r1_topk_large,
             r1_min_abundance=r1_min_abundance,
             species_min_abundance=species_min_abundance,
+            ggcat_temp_dir=ggcat_temp_dir,
+            ggcat_memory=ggcat_memory,
+            ggcat_prefer_memory=ggcat_prefer_memory,
+            ggcat_disk_optimization_level=ggcat_disk_optimization_level,
+            ggcat_intermediate_compression_level=ggcat_intermediate_compression_level,
         )
 
 # =========================
@@ -158,6 +173,11 @@ def run_paired(reads, db_prefix, out_prefix,
                r1_topk_large=3,
                r1_min_abundance=0.0,
                species_min_abundance=0.0,
+               ggcat_temp_dir=None,
+               ggcat_memory=None,
+               ggcat_prefer_memory=False,
+               ggcat_disk_optimization_level=None,
+               ggcat_intermediate_compression_level=None,
 ):
     if len(reads) != 2:
         raise SystemExit("[PanTax-DBG] Paired-end mode requires two -r reads (R1 and R2).")
@@ -175,46 +195,33 @@ def run_paired(reads, db_prefix, out_prefix,
     ensure_dir(work_q)
 
     # -------------------------------------------------------------
-    # 1) Ganon Step: Check existing files to skip
+    # 1) Fast DBG-ganon pre-screening
     # -------------------------------------------------------------
-    ganon_out_prefix = work_ganon / "results"
-    
-    # 提前定义好所有目标文件路径
     ganon_tre = work_ganon / "tax_profile.tre"
     ganon_species = work_ganon / "species_abundance.txt"
     ganon_strain = work_ganon / "strain_abundance.txt"
     ganon_predict_spy = work_ganon / "predict_spy.ID.abundance"
 
-    # [优化]：检查是否所有关键输出文件都已存在
     all_ganon_files_exist = (
-        ganon_tre.exists() and 
-        ganon_species.exists() and 
-        ganon_strain.exists() and 
+        ganon_tre.exists() and
+        ganon_species.exists() and
+        ganon_strain.exists() and
         ganon_predict_spy.exists()
     )
 
     if all_ganon_files_exist:
-        print("[PanTax-DBG] Found existing Ganon results. Skipping classify & report steps.")
+        print("[PanTax-DBG] Found existing fast DBG-ganon outputs. Skipping pre-screening.")
     else:
-        print("[PanTax-DBG] Running Ganon classification...")
-        # 1.1) ganon classify (paired)
-        ganon_wrapper.run_classify_paired(
+        print("[PanTax-DBG] Running built-in fast DBG-ganon pre-screening...")
+        fast_ganon.run_paired_prehit(
             db_prefix=db_prefix,
             read1=r1,
             read2=r2,
-            out_prefix=str(ganon_out_prefix),
+            query_dir=work_ganon,
             threads=threads,
             report_type=report_type,
-        )
-
-        # 1.2) ganon report + postprocess
-        ganon_wrapper.run_report_and_postprocess(
-            db_prefix=db_prefix,
-            classify_prefix=str(ganon_out_prefix),
-            tre_out=str(ganon_tre),
-            species_out=str(ganon_species),
-            strain_out=str(ganon_strain),
-            predict_spy_out=str(ganon_predict_spy),
+            keep_species_all=False,
+            force=False,
         )
 
     # =========================================================
@@ -285,6 +292,11 @@ def run_paired(reads, db_prefix, out_prefix,
             threads=threads,
             color_mapping=str(color_map),
             output=str(ggcat_db),
+            temp_dir=ggcat_temp_dir,
+            memory=ggcat_memory,
+            prefer_memory=ggcat_prefer_memory,
+            disk_optimization_level=ggcat_disk_optimization_level,
+            intermediate_compression_level=ggcat_intermediate_compression_level,
         )
 
     # 6) fastp 
@@ -459,7 +471,12 @@ def run_paired(reads, db_prefix, out_prefix,
 
 def run_single(reads, db_prefix, out_prefix,
                report_type, ref_info, threads, k,
-               species_min_abundance=0.0):
+               species_min_abundance=0.0,
+               ggcat_temp_dir=None,
+               ggcat_memory=None,
+               ggcat_prefer_memory=False,
+               ggcat_disk_optimization_level=None,
+               ggcat_intermediate_compression_level=None):
                
     if len(reads) != 1:
         raise SystemExit("[PanTax-DBG] --single mode requires exactly one -r reads file.")
@@ -537,6 +554,11 @@ def run_single(reads, db_prefix, out_prefix,
             threads=threads,
             color_mapping=str(color_map),
             output=str(ggcat_db),
+            temp_dir=ggcat_temp_dir,
+            memory=ggcat_memory,
+            prefer_memory=ggcat_prefer_memory,
+            disk_optimization_level=ggcat_disk_optimization_level,
+            intermediate_compression_level=ggcat_intermediate_compression_level,
         )
 
     # 6) ggcat query（raw read）

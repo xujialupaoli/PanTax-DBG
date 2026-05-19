@@ -130,6 +130,11 @@ def subcmd_profile(args):
         r1_topk_large=args.r1_topk_large,
         r1_min_abundance=args.r1_min_abundance,
         species_min_abundance=args.species_min_abundance,
+        ggcat_temp_dir=args.ggcat_temp_dir,
+        ggcat_memory=None,
+        ggcat_prefer_memory=False,
+        ggcat_disk_optimization_level=None,
+        ggcat_intermediate_compression_level=None,
         # ganon_singleton_min_abund=args.ganon_singleton_min_abund,
     )
 
@@ -194,6 +199,10 @@ def build_parser():
                         help="Minimum relative abundance (from Ganon) to keep a species for ccDBG construction (default: 0.0).")
     p_prof.add_argument("--species-min-abundance", type=float, default=0.0,
                         help="Minimum relative abundance for final species output. Species below this are removed and abundances are re-normalized. (default: 0.0).")
+
+    # ---- DBG-ggcat resource / I/O parameters ----
+    p_prof.add_argument("--ggcat-temp-dir", default=None,
+                        help="Temporary directory for DBG-ggcat build intermediate files. Default: auto-create a per-run directory under ${TMPDIR:-/tmp}.")
     return p
 
 
@@ -232,6 +241,6 @@ def build_custom_main():
 
 def profile_main():
     p = build_parser()
-    fake_argv = ["themis", "profile"] + sys.argv[1:]
+    fake_argv = ["pantax-dbg", "profile"] + sys.argv[1:]
     args = p.parse_args(fake_argv[1:])
     subcmd_profile(args)

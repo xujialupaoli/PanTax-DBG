@@ -1,58 +1,58 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
-
-import sys
 from pathlib import Path
+import argparse
 
 
-def run(tre_file, output_path):
-    tre_file = Path(tre_file)
-    output_path = Path(output_path)
+def run(report_file, output="species_abundance.txt"):
+    """
+    Extract species-level relative abundance from a ganon .tre file.
+
+    Expected TRE columns:
+      rank, taxid, lineage, name, matches, unique, lca, reads, pct
+
+    Output:
+      speciesID <tab> abundance
+    """
+    report_file = Path(report_file)
+    output = Path(output)
 
     tax_profile_dict = {}
-
-    with tre_file.open("r", encoding="utf-8") as f_in:
+    with report_file.open("r", encoding="utf-8", errors="replace") as f_in:
         for line in f_in:
-            line = line.strip()
-            if not line:
+            if not line.strip():
                 continue
-            if line.startswith("species"):
-                tokens = line.split("\t")
-                if len(tokens) < 9:
-                    continue
-                # 
-                species_taxid = tokens[2].split("|")[-1]
-                try:
-                    abundance = float(tokens[8]) / 100.0
-                except ValueError:
-                    continue
-                tax_profile_dict[species_taxid] = abundance
+            if not line.startswith("species\t"):
+                continue
+            tokens = line.rstrip("\n").split("\t")
+            if len(tokens) < 9:
+                continue
+            species_taxid = tokens[1].strip()
+            if not species_taxid:
+                continue
+            try:
+                abundance = float(tokens[8]) / 100.0
+            except ValueError:
+                continue
+            tax_profile_dict[species_taxid] = abundance
 
-    # 
-    sorted_tax_profile = sorted(
-        tax_profile_dict.items(),
-        key=lambda item: item[1],
-        reverse=True,
-    )
+    sorted_items = sorted(tax_profile_dict.items(), key=lambda item: item[1], reverse=True)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf-8") as f_out:
+        f_out.write("speciesID\tabundance\n")
+        for k, v in sorted_items:
+            f_out.write(f"{k}\t{v}\n")
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8") as f_out:
-        f_out.write("species_taxid\tpredicted_abundance\n")
-        for sid, abund in sorted_tax_profile:
-            f_out.write(f"{sid}\t{abund}\n")
+    return str(output)
 
 
 def main():
-    # 
-    # 
-    if len(sys.argv) != 2:
-        print("Usage: python ganon_species_process.py tax_profile.tre", file=sys.stderr)
-        sys.exit(1)
-
-    tre_file = sys.argv[1]
-    run(tre_file, "species_abundance.txt")
+    ap = argparse.ArgumentParser(description="Extract species abundance from a ganon TRE file.")
+    ap.add_argument("report_file")
+    ap.add_argument("-o", "--output", default="species_abundance.txt")
+    args = ap.parse_args()
+    run(args.report_file, args.output)
 
 
 if __name__ == "__main__":
