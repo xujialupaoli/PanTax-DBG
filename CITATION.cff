@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+title: "PanTax-DBG"
+message: "If you use PanTax-DBG, please cite this software."
+type: software
+authors:
+  - family-names: "Xu"
+    given-names: "Jialu"
+version: "0.1.0"
+license: "GPL-3.0-or-later"
