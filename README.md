@@ -4,8 +4,8 @@
 
 PanTax-DBG bundles modified versions of ganon and ggcat, referred to here as **DBG-ganon** and **DBG-ggcat**. These modified backends are required by PanTax-DBG and are not identical to upstream ganon or ggcat. During installation, they are compiled from source and installed under `libexec/pantax-dbg/`. PanTax-DBG calls these bundled binaries directly rather than relying on system-wide ganon or ggcat installations.
 
-<!-- [![BioConda Install](https://img.shields.io/conda/dn/bioconda/themis.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/themis)
-[![Anaconda-Server Badge](https://anaconda.org/bioconda/themis/badges/version.svg)](https://anaconda.org/bioconda/themis)
+<!-- [![BioConda Install](https://img.shields.io/conda/dn/bioconda/pantax_dbg.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/pantax_dbg)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/pantax_dbg/badges/version.svg)](https://anaconda.org/bioconda/pantax_dbg)
 [![License](https://img.shields.io/github/license/xujialupaoli/Themis)](https://www.gnu.org/licenses/gpl-3.0.en.html) -->
 
 
@@ -33,21 +33,21 @@ Themis is a fast and robust metagenomic profiler that achieves high accuracy acr
 ```
 conda create -n themis_env
 conda activate themis_env
-conda install -c bioconda -c conda-forge themis
-## Run themis.
-themis -h
+conda install -c bioconda -c conda-forge pantax_dbg
+## Run pantax_dbg.
+pantax_dbg -h
 ```
 ## Features
 
 - **Commands**
-  - `pantax-dbg build-custom` Build custom themis databases.
+  - `pantax-dbg build-custom` Build custom pantax_dbg databases.
   - `pantax-dbg profile` Profile reads against custom databases.
 
 
 ## Quick start
 * **1-build-custom-reference-database** 
 ```
-themis build-custom  --input-file input_genomes.txt --taxonomy-files nodes.dmp names.dmp --db-prefix themisDB --level strain -t $threads -k 19 -w 51
+pantax-dbg build-custom  --input-file input_genomes.txt --taxonomy-files nodes.dmp names.dmp --db-prefix themisDB --level strain -t $threads -k 19 -w 51
 ```
 input_genomes.txt is a headerless, tab-separated manifest where each line contains (1) the absolute path to a genome FASTA file, (2) its strain\_name, and (3) the corresponding strain-level NCBI taxid.
 
@@ -57,9 +57,9 @@ Due to the large size of the reference pangenome we used for testing, we provide
 
 ```
 # short read(pair-end)
-themis -r read1.fq -r $read2.fq --db-prefix themisDB --ref-info genomes_info.txt --out themis_query --threads 64 -k 31
+pantax_dbg -r read1.fq -r $read2.fq --db-prefix themisDB --ref-info genomes_info.txt --out themis_query --threads 64 -k 31
 # long read
-themis -r $reads.fq --single --db-prefix themisDB --ref-info genomes_info.txt --out themis_query --threads 64 -k 31
+pantax_dbg -r $reads.fq --single --db-prefix themisDB --ref-info genomes_info.txt --out themis_query --threads 64 -k 31
 ```
 genomes_info.txt is a tab-separated metadata table with a header line. The columns are, in order: strain_name, strain_taxid, species_taxid, species_name, and genome_path, where strain_name and strain_taxid must be unique and genome_path gives the absolute path to the corresponding genome FASTA file.
 

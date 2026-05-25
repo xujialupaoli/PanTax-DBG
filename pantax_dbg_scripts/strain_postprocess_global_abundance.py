@@ -86,7 +86,7 @@ def run(
     delim: str = "\t",
 ) -> Tuple[str, str]:
     """
-    Module entry for themis/profile.py
+    Module entry for pantax_dbg/profile.py
 
     Writes:
       <out_prefix>.with_global.tsv
@@ -234,7 +234,7 @@ def main():
     ap.add_argument("-i", "--input", required=True,
                     help="Input strain-group table (TOPK result, with strain_taxid & strain_name)")
     ap.add_argument("--threshold", type=float, required=True,
-                    help="threshold computed in themis/profile.py")
+                    help="threshold computed in pantax_dbg/profile.py")
     ap.add_argument("--div", type=float, default=5.0,
                     help="cutoff = threshold/div (default=5.0)")
     ap.add_argument("-o", "--out_prefix", required=True,

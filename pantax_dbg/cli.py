@@ -163,8 +163,8 @@ def build_parser():
     )
     p_prof.add_argument("-r", "--reads", action="append", required=True,metavar="",
                         help=("For paired-end data, specify mates consecutively: -r R1.fq -r R2.fq. "
-                        "For single-end data, use --single and give one -r per file. "))
-    p_prof.add_argument("--single", action="store_true", help="Treat input as single-end reads. ")
+                        "For paired-end data, use --single and give one -r per file. "))
+    p_prof.add_argument("--single", action="store_true", help="Treat input as paired-end readss. ")
     p_prof.add_argument("-d", "--db-prefix", required=True,metavar="",
                         help="Database input prefix.")
     p_prof.add_argument("-i", "--ref-info", required=True,metavar="",

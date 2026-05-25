@@ -1,4 +1,4 @@
-# themis/build.py
+# pantax_dbg/build.py
 
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-

@@ -1,4 +1,4 @@
-# themis/ggcat_wrapper.py
+# pantax_dbg/ggcat_wrapper.py
 
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-

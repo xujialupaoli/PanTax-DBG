@@ -10,11 +10,11 @@ from typing import Dict
 from .utils import ensure_dir, run_cmd
 from .paths import get_internal_binary, get_dbg_ganon
 
-from themis_scripts import make_species_rep_from_all
-from themis_scripts import species_reassign_em_strict
-from themis_scripts import make_virtual_tax_profile_with_strains
-from themis_scripts import ganon_species_process
-from themis_scripts import parse_strain
+from pantax_dbg_scripts import make_species_rep_from_all
+from pantax_dbg_scripts import species_reassign_em_strict
+from pantax_dbg_scripts import make_virtual_tax_profile_with_strains
+from pantax_dbg_scripts import ganon_species_process
+from pantax_dbg_scripts import parse_strain
 
 
 GANON_STRAIN_TOPK = 10

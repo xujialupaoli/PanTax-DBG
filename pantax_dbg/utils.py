@@ -1,4 +1,4 @@
-# themis/utils.py
+# pantax_dbg/utils.py
 import subprocess
 import sys
 from pathlib import Path

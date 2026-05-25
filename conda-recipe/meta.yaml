@@ -50,8 +50,8 @@ requirements:
 
 test:
   imports:
-    - themis
-    - themis_scripts
+    - pantax_dbg
+    - pantax_dbg_scripts
   commands:
     - pantax-dbg --help
     - test -x "$PREFIX/libexec/pantax-dbg/ganon"

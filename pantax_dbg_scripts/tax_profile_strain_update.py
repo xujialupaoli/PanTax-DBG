@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# 文件名: themis_scripts/tax_profile_strain_update.py
+# 文件名: pantax_dbg_scripts/tax_profile_strain_update.py
 
 from pathlib import Path
 

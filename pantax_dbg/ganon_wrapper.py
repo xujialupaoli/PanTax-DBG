@@ -26,14 +26,14 @@ except Exception:
 _gsp_run = None
 _gst_run = None
 try:
-    from themis_scripts import ganon_species_process as _gsp
-    from themis_scripts import ganon_strain_process as _gst
+    from pantax_dbg_scripts import ganon_species_process as _gsp
+    from pantax_dbg_scripts import ganon_strain_process as _gst
     _gsp_run = getattr(_gsp, "run", None)
     _gst_run = getattr(_gst, "run", None)
 except Exception:
     pass
 
-#GANON = os.environ.get("THEMIS_GANON_BIN", "ganon")  
+#GANON = os.environ.get("PanTax-DBG_GANON_BIN", "ganon")  
 def _ganon_bin():
     return os.environ.get("PANTAX_DBG_GANON_BIN") or get_dbg_ganon()
 

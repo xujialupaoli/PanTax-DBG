@@ -14,7 +14,7 @@ from . import ganon_wrapper, ggcat_wrapper, fast_ganon
 
 
 def _ts(mod: str):
-    return importlib.import_module(f"themis_scripts.{mod}")
+    return importlib.import_module(f"pantax_dbg_scripts.{mod}")
 #修改了计算相对丰度的方式，主要用ggcat 还是ganon的判定方式修改了
 # ==============================================================================
 # Helper: Filter and Renormalize (支持科学计数法识别与重新归一化)
@@ -117,6 +117,14 @@ def run(
     ggcat_disk_optimization_level=None,
     ggcat_intermediate_compression_level=None,
 ):
+    # Public PanTax-DBG release: paired-end short-read workflow only.
+    # Internal single-read code paths are intentionally not exposed in this release.
+    if len(reads) != 2:
+        raise SystemExit(
+            "[PanTax-DBG][error] profile expects paired-end short-read input. "
+            "Please provide exactly two read files with -r R1 -r R2."
+        )
+
     
     out_prefix = Path(out_prefix).absolute()
     ensure_dir(out_prefix)
@@ -497,7 +505,7 @@ def run_single(reads, db_prefix, out_prefix,
     ganon_tre = work_ganon / "tax_profile.tre"
     ganon_species = work_ganon / "species_abundance.txt"
     ganon_strain = work_ganon / "strain_abundance.txt"
-    # 注意：Single mode 原代码没有生成 predict_spy.ID.abundance
+    # 注意：Paired-end mode 原代码没有生成 predict_spy.ID.abundance
 
     all_ganon_files_exist = (
         ganon_tre.exists() and 
@@ -567,7 +575,7 @@ def run_single(reads, db_prefix, out_prefix,
     # [优化] 单端模式的输出检查
     check_ggcat_outputs_single = [
         Path(f"{ggcat_prefix}.species_counts.tsv"),
-        # Single mode 可能没有 strain group abundance (原逻辑看起来没有相关后处理), 
+        # Paired-end mode 可能没有 strain group abundance (原逻辑看起来没有相关后处理), 
         # 但如果有的话也可以加，这里只检查 species_counts
     ]
     if all(p.exists() for p in check_ggcat_outputs_single):
@@ -888,7 +896,7 @@ def _run_threshold_and_lc_for_single(
 # =========================
 
 def cli():
-    p = argparse.ArgumentParser("themis-profile")
+    p = argparse.ArgumentParser("pantax_dbg-profile")
     p.add_argument("-r", "--reads", action="append", required=True, help="Input reads.")
     p.add_argument("--single", action="store_true", help="Single-end mode.")
     p.add_argument("--db-prefix", required=True, help="Ganon DB prefix.")

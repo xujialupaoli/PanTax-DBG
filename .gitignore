@@ -1,1 +1,13 @@
 _backup_before_name_cleanup_20260518_225710
+# local backups/build logs generated during PanTax-DBG packaging
+_backup_before_*/
+*.backup_*
+thirdparty.backup_*/
+conda-recipe.backup_*/
+pantax_dbg.egg-info/
+*.egg-info/
+conda_build*.log
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/

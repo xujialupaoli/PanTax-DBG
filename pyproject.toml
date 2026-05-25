@@ -15,7 +15,7 @@ authors = [
 dependencies = []
 
 [project.scripts]
-pantax-dbg = "themis.cli:main"
+pantax-dbg = "pantax_dbg.cli:main"
 
 [tool.setuptools]
-packages = ["themis", "themis_scripts"]
+packages = ["pantax_dbg", "pantax_dbg_scripts"]
