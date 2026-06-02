@@ -41,8 +41,8 @@ def run(cmd, ret_stdout: bool=False, shell: bool=False, quiet: bool=False):
 def logo(version):
     logo = ""
     logo += "┌──────────────────────────────┐\n"
-    logo += "│           THEMIS             │\n"
-    logo += "│   Metagenomic Profiler       │\n"
+    logo += "│          PanTax-DBG          │\n"
+    logo += "│  Species & Strain Profiler   │\n"
     logo += "└──────────────────────────────┘"
     return logo
 

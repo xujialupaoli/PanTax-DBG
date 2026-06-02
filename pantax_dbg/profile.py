@@ -15,6 +15,15 @@ from . import ganon_wrapper, ggcat_wrapper, fast_ganon
 
 def _ts(mod: str):
     return importlib.import_module(f"pantax_dbg_scripts.{mod}")
+
+
+def _cleanup_intermediate_dirs(*paths):
+    """Remove internal work directories after a successful paired-end run."""
+    for path in paths:
+        p = Path(path)
+        if p.exists() and p.is_dir():
+            shutil.rmtree(p, ignore_errors=True)
+
 #修改了计算相对丰度的方式，主要用ggcat 还是ganon的判定方式修改了
 # ==============================================================================
 # Helper: Filter and Renormalize (支持科学计数法识别与重新归一化)
@@ -274,9 +283,11 @@ def run_paired(reads, db_prefix, out_prefix,
         )
         shutil.copyfile(sel_tsv, tmp_id_table)
     else:
-        print("[PanTax-DBG] Warning: No species remained after filtering. Exiting paired-end profiling.")
+        print("[PanTax-DBG] Warning: No species remained after filtering. Writing an empty final species profile.")
         final_abundance = out_prefix / "species_abundance.txt"
-        with open(final_abundance, "w") as f: f.write("speciesID\tabundance\n")
+        with open(final_abundance, "w") as f:
+            f.write("speciesID\tabundance\n")
+        _cleanup_intermediate_dirs(work_ganon, work_db, work_q, out_prefix / ".temp_files")
         return str(final_abundance)
 
     # 4) color_mapping
@@ -466,12 +477,21 @@ def run_paired(reads, db_prefix, out_prefix,
 
     Path(temp_mix_abundance).unlink(missing_ok=True)
 
-    print(f"[PanTax-DBG] Paired-end profiling done.")
-    print(f"  - Species Result: {final_abundance}")
-    print(f"  - Species Tree:   {ganon_tre}")
-    print(f"  - Strain Result:  {final_strain_abundance}")
-    print(f"  - Strain Tree:    {final_strain_tre}")
-    
+    # Copy the final species-level tree out of the internal working directory
+    # before removing intermediate files.
+    final_species_tre = out_prefix / "tax_profile.tre"
+    if ganon_tre.exists():
+        shutil.copyfile(ganon_tre, final_species_tre)
+
+    # Keep only user-facing final outputs after a successful paired-end run.
+    _cleanup_intermediate_dirs(work_ganon, work_db, work_q, out_prefix / ".temp_files")
+
+    print("[PanTax-DBG] Paired-end profiling completed.")
+    print(f"  - Species profile: {final_abundance}")
+    print(f"  - Species tree:    {final_species_tre}")
+    print(f"  - Strain profile:  {final_strain_abundance}")
+    print(f"  - Strain tree:     {final_strain_tre}")
+
     return str(final_abundance)
 # =========================
 # Single Mode
@@ -640,11 +660,19 @@ def _count_non_empty_lines(path):
     return c
 
 def _prepare_ggcat_reads_paired(r1, r2, out_fastq, threads=8):
+    # Write QC reports to the final output directory rather than the current
+    # shell working directory.
+    final_output_dir = Path(out_fastq).parent.parent
+    fastp_html = final_output_dir / "fastp.html"
+    fastp_json = final_output_dir / "fastp.json"
+
     cmd = [
         "fastp",
         "-i", r1,
         "-I", r2,
         "--thread", str(threads),
+        "--html", str(fastp_html),
+        "--json", str(fastp_json),
         "--stdout",
     ]
     with open(out_fastq, "w") as out_f:
@@ -892,24 +920,29 @@ def _run_threshold_and_lc_for_single(
             fout.write(f"{sid}\t{rel}\n")
 
 # =========================
-# CLI Wrapper
+# Module CLI wrapper
 # =========================
 
 def cli():
     p = argparse.ArgumentParser("pantax_dbg-profile")
-    p.add_argument("-r", "--reads", action="append", required=True, help="Input reads.")
-    p.add_argument("--single", action="store_true", help="Single-end mode.")
-    p.add_argument("--db-prefix", required=True, help="Ganon DB prefix.")
-    p.add_argument("--ref-info", required=True, help="Reference info TSV.")
-    p.add_argument("--out", required=True, help="Output directory.")
-    p.add_argument("--threads", type=int, default=8, help="Number of threads.")
-    p.add_argument("-k", "--kmer", type=int, default=31, help="k-mer size.")
-    
-    args, unknown = p.parse_known_args()
+    p.add_argument("-r", "--reads", action="append", required=True, metavar="FASTQ",
+                   help="Input paired-end FASTQ file. Supply exactly twice: -r read1.fq.gz -r read2.fq.gz.")
+    p.add_argument("--db-prefix", required=True, metavar="PREFIX", help="PanTax-DBG database prefix.")
+    p.add_argument("--ref-info", required=True, metavar="FILE", help="Reference metadata TSV.")
+    p.add_argument("--out", required=True, metavar="DIR", help="Output directory.")
+    p.add_argument("--threads", type=int, default=8, metavar="INT", help="Number of threads. (default: 8)")
+    p.add_argument("-k", "--kmer", type=int, default=31, metavar="INT", help="k-mer size. (default: 31)")
+
+    args = p.parse_args()
+    if len(args.reads) != 2:
+        raise SystemExit(
+            "[PanTax-DBG][error] Expected two paired-end short-read FASTQ files. "
+            "Please provide: -r read1.fq.gz -r read2.fq.gz"
+        )
 
     run(
         reads=args.reads,
-        single=args.single,
+        single=False,
         db_prefix=args.db_prefix,
         out_prefix=args.out,
         report_type="abundance",
@@ -917,6 +950,7 @@ def cli():
         threads=args.threads,
         k=args.kmer,
     )
+
 
 if __name__ == "__main__":
     cli()

@@ -4,15 +4,16 @@
 import os
 import sys
 import argparse
-from pathlib import Path
 
 from . import profile as profile_mod
 from .utils import run_cmd
-
 from .paths import get_dbg_ganon
+
 
 def _ganon():
     return os.environ.get("PANTAX_DBG_GANON_BIN") or get_dbg_ganon()
+
+
 BUILD_CUSTOM_HELP = """\
 usage: pantax-dbg build-custom [-h] [-i [...]] [-e] [-c] [-n] [-a] [-l] [-m [...]] [-z [...]] [--skip-genome-size] [-r [...]]
                           [-q [...]] -d DB_PREFIX [-x] [-t] [-p] [-k] [-w] [-s] [-f] [-j] [-y] [-v] [--restart]
@@ -96,8 +97,9 @@ optional arguments:
 """
 
 PROFILE_USAGE = """\
-pantax-dbg profile [-h] -r [...] [--single]--db-prefix DB_PREFIX -i REF_INFO -o [-t] [-k]
+pantax-dbg profile [-h] -r READ1 -r READ2 -d PREFIX -i FILE -o DIR [options]
 """
+
 
 def subcmd_build_custom(argv):
     if any(a in ("-h", "--help") for a in argv):
@@ -108,24 +110,24 @@ def subcmd_build_custom(argv):
 
 
 def subcmd_profile(args):
-    if not args.reads:
-        raise SystemExit("[PanTax-DBG] --reads/-r .Paired: -r R1 -r R2；Single: -r R.")
+    if len(args.reads) != 2:
+        raise SystemExit(
+            "[PanTax-DBG][error] Expected two paired-end short-read FASTQ files. "
+            "Please provide: -r read1.fq.gz -r read2.fq.gz"
+        )
 
     profile_mod.run(
         reads=args.reads,
-        single=args.single,
+        single=False,
         db_prefix=args.db_prefix,
         out_prefix=args.out,
         report_type="abundance",
         file_info=args.ref_info,
         threads=args.threads,
         k=args.kmer,
-        # new knobs
         strain_min_reads=args.strain_min_reads,
         strain_topk=args.strain_topk,
-        #strain_keep_ties=args.strain_keep_ties,
         strain_div=args.strain_div,
-
         r1_large_n=args.r1_large_n,
         r1_topk_large=args.r1_topk_large,
         r1_min_abundance=args.r1_min_abundance,
@@ -135,112 +137,202 @@ def subcmd_profile(args):
         ggcat_prefer_memory=False,
         ggcat_disk_optimization_level=None,
         ggcat_intermediate_compression_level=None,
-        # ganon_singleton_min_abund=args.ganon_singleton_min_abund,
     )
 
 
 def build_parser():
-    p = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         prog="pantax-dbg",
-        description="PanTax-DBG: a robust and accurate species-level metagenomic profiler."
+        description=(
+            "PanTax-DBG: accurate species- and strain-level profiling "
+            "for paired-end short-read metagenomes."
+        ),
     )
-    sub = p.add_subparsers(dest="subcmd", metavar="<command>")
+    subparsers = parser.add_subparsers(dest="subcmd", metavar="<command>")
 
-   
-    p_build = sub.add_parser(
+    build_parser = subparsers.add_parser(
         "build-custom",
-        help="Build custom PanTax-DBG databases."
+        help="Build a custom PanTax-DBG reference database.",
     )
-    p_build.add_argument("ganon_args", nargs=argparse.REMAINDER,
-                         help="Arguments passed directly to 'ganon build-cutstom'.")
+    build_parser.add_argument(
+        "ganon_args",
+        nargs=argparse.REMAINDER,
+        help="Arguments forwarded to the PanTax-DBG database builder.",
+    )
 
-
-    #p_prof = sub.add_parser("profile", help="Profile reads against custom databases.")
-    p_prof = sub.add_parser(
+    profile_parser = subparsers.add_parser(
         "profile",
-        help="Profile reads against custom databases.",
-        usage=PROFILE_USAGE,                         
+        help="Profile paired-end reads at species and strain levels.",
+        description=(
+            "Estimate species- and strain-level relative abundances from "
+            "paired-end short-read metagenomes using PanTax-DBG."
+        ),
+        usage=PROFILE_USAGE,
+        formatter_class=argparse.RawTextHelpFormatter,
     )
-    p_prof.add_argument("-r", "--reads", action="append", required=True,metavar="",
-                        help=("For paired-end data, specify mates consecutively: -r R1.fq -r R2.fq. "
-                        "For paired-end data, use --single and give one -r per file. "))
-    p_prof.add_argument("--single", action="store_true", help="Treat input as paired-end readss. ")
-    p_prof.add_argument("-d", "--db-prefix", required=True,metavar="",
-                        help="Database input prefix.")
-    p_prof.add_argument("-i", "--ref-info", required=True,metavar="",
-                        help=("Tab-separated reference metadata file. Fields: "
-                        "strain_name <tab> strain_taxid <tab> species_taxid "
-                        "<tab> species_name <tab> genome_path. "
-                        "strain_name and strain_taxid must be unique."))
-    p_prof.add_argument("-o", "--output", required=True, metavar="", dest="out", help="Output directory for profiling results.")
-    p_prof.add_argument("-t", "--threads", type=int, default=8, metavar="", help="Number of threads.")
-    p_prof.add_argument("-k", "--kmer-size", dest="kmer",type=int, default=31, metavar="", help="k-mer size used in the ccDBG-based profiling step.")
 
+    required = profile_parser.add_argument_group("required arguments")
+    required.add_argument(
+        "-r", "--reads",
+        action="append",
+        required=True,
+        metavar="FASTQ",
+        help=(
+            "Input paired-end FASTQ file. Supply exactly twice in mate order:\n"
+            "  -r read1.fq.gz -r read2.fq.gz"
+        ),
+    )
+    required.add_argument(
+        "-d", "--db-prefix",
+        required=True,
+        metavar="PREFIX",
+        help="Prefix of a database built with 'pantax-dbg build-custom'.",
+    )
+    required.add_argument(
+        "-i", "--ref-info",
+        required=True,
+        metavar="FILE",
+        help=(
+            "Tab-delimited reference metadata table for DBG refinement.\n"
+            "Columns: strain_name, strain_taxid, species_taxid, species_name, genome_path."
+        ),
+    )
+    required.add_argument(
+        "-o", "--output",
+        dest="out",
+        required=True,
+        metavar="DIR",
+        help="Output directory for final species- and strain-level profiles.",
+    )
 
+    profiling = profile_parser.add_argument_group("profiling arguments")
+    profiling.add_argument(
+        "-t", "--threads",
+        type=int,
+        default=8,
+        metavar="INT",
+        help="Number of worker threads. (default: 8)",
+    )
+    profiling.add_argument(
+        "-k", "--kmer-size",
+        dest="kmer",
+        type=int,
+        default=31,
+        metavar="INT",
+        help="k-mer size for colored DBG refinement. (default: 31)",
+    )
+    profiling.add_argument(
+        "--species-min-abundance",
+        type=float,
+        default=0.0,
+        metavar="FLOAT",
+        help=(
+            "Minimum relative abundance retained in the final species profile;\n"
+            "retained abundances are renormalized. (default: 0.0)"
+        ),
+    )
 
-    # ---- strain postprocess params ----
-    p_prof.add_argument("--strain-min-reads", type=float, default=5.0,
-                        help="Minimum assigned_reads to keep a strain-group row before TopK.")
-    p_prof.add_argument("--strain-topk", type=int, default=5,
-                        help="Keep top-K strain groups per species (by rel_abundance_within_species).")
-    # p_prof.add_argument("--strain-keep-ties", action="store_true", default=False,
-    #                     help="Keep all ties at K-th score when selecting TopK strain groups.")
-    p_prof.add_argument("--strain-div", type=float, default=5.0,
-                        help="cutoff = threshold / div for further strain filtering (default 5.0).")
+    strain = profile_parser.add_argument_group("strain refinement arguments")
+    strain.add_argument(
+        "--strain-min-reads",
+        type=float,
+        default=5.0,
+        metavar="FLOAT",
+        help=(
+            "Minimum assigned-read support required before strain candidate\n"
+            "ranking. (default: 5.0)"
+        ),
+    )
+    strain.add_argument(
+        "--strain-topk",
+        type=int,
+        default=5,
+        metavar="INT",
+        help=(
+            "Maximum number of retained strain candidates per species after\n"
+            "ranking. (default: 5)"
+        ),
+    )
+    strain.add_argument(
+        "--strain-div",
+        type=float,
+        default=5.0,
+        metavar="FLOAT",
+        help=(
+            "Divisor used in secondary strain-support filtering.\n"
+            "(default: 5.0)"
+        ),
+    )
 
-    # ---- ganon mapping switch params ----
-    p_prof.add_argument("--r1-large-n", type=int, default=1000,
-                        help="If r1 species hits > this value, use large-n TopK+singleton filtering mapping.")
-    p_prof.add_argument("--r1-topk-large", type=int, default=3,
-                        help="TopK strains used in ccDBG.")
-    # p_prof.add_argument("--ganon-singleton-min-abund", type=float, default=7e-7,
-    #                     help="singleton_min_abund used in large-n mapping step.")
-    p_prof.add_argument("--r1-min-abundance", type=float, default=0.0,
-                        help="Minimum relative abundance (from Ganon) to keep a species for ccDBG construction (default: 0.0).")
-    p_prof.add_argument("--species-min-abundance", type=float, default=0.0,
-                        help="Minimum relative abundance for final species output. Species below this are removed and abundances are re-normalized. (default: 0.0).")
+    candidates = profile_parser.add_argument_group("candidate screening arguments")
+    candidates.add_argument(
+        "--r1-large-n",
+        type=int,
+        default=1000,
+        metavar="INT",
+        help=(
+            "Candidate-set size above which large-set top-k filtering is\n"
+            "applied. (default: 1000)"
+        ),
+    )
+    candidates.add_argument(
+        "--r1-topk-large",
+        type=int,
+        default=3,
+        metavar="INT",
+        help=(
+            "Number of strain candidates retained per species in large-set\n"
+            "filtering mode. (default: 3)"
+        ),
+    )
+    candidates.add_argument(
+        "--r1-min-abundance",
+        type=float,
+        default=0.0,
+        metavar="FLOAT",
+        help=(
+            "Minimum first-round species abundance retained for DBG\n"
+            "refinement. (default: 0.0)"
+        ),
+    )
 
-    # ---- DBG-ggcat resource / I/O parameters ----
-    p_prof.add_argument("--ggcat-temp-dir", default=None,
-                        help="Temporary directory for DBG-ggcat build intermediate files. Default: auto-create a per-run directory under ${TMPDIR:-/tmp}.")
-    return p
+    technical = profile_parser.add_argument_group("technical arguments")
+    technical.add_argument(
+        "--ggcat-temp-dir",
+        default=None,
+        metavar="DIR",
+        help=(
+            "Directory for DBG-ggcat temporary build files. By default, a\n"
+            "run-specific directory is created under $TMPDIR or /tmp."
+        ),
+    )
+    return parser
 
 
 def main():
-    p = build_parser()
+    parser = build_parser()
     argv = sys.argv[1:]
 
-    
-    if not argv:
-        p.print_help()
+    if not argv or argv[0] in ("-h", "--help"):
+        parser.print_help()
         sys.exit(0)
 
-    
-    if argv[0] in ("-h", "--help"):
-        p.print_help()
-        sys.exit(0)
-
-    
     subcmd = argv[0]
-
     if subcmd == "build-custom":
-        
         subcmd_build_custom(argv[1:])
     elif subcmd == "profile":
-        
-        args = p.parse_args(argv)
+        args = parser.parse_args(argv)
         subcmd_profile(args)
     else:
-        
-        p.print_help()
+        parser.print_help()
         sys.exit(1)
 
 
 def build_custom_main():
     subcmd_build_custom(sys.argv[1:])
 
+
 def profile_main():
-    p = build_parser()
-    fake_argv = ["pantax-dbg", "profile"] + sys.argv[1:]
-    args = p.parse_args(fake_argv[1:])
+    parser = build_parser()
+    args = parser.parse_args(["profile"] + sys.argv[1:])
     subcmd_profile(args)
