@@ -64,27 +64,6 @@ mamba create -n pantaxdbg_env pantax-dbg \
 mamba activate pantaxdbg_env
 pantax-dbg -h
 ```
-
-### Test a package downloaded from Bioconda CI
-
-For a package archive downloaded from a Bioconda pull-request build, unpack the local channel and install from it:
-
-```bash
-unzip linux-packages.zip
-
-mamba create -n pantaxdbg_env_v1
-mamba activate pantaxdbg_env_v1
-mamba install -c ./packages pantax-dbg
-
-pantax-dbg -h
-```
-
-
-
-For general users, the Bioconda package is recommended because it installs the required compiled components together with the command-line interface.
-
----
-
 ## Commands
 
 PanTax-DBG provides two public commands:
