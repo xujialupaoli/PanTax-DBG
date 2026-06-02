@@ -184,26 +184,6 @@ example/profile_res/tax_profile.tre
 example/profile_res/tax_profile_strain.tre
 ```
 
-For a production run with more threads:
-
-```bash
-/usr/bin/time -v -o sample.time.log \
-pantax-dbg profile \
-    -r read1.fq.gz \
-    -r read2.fq.gz \
-    --db-prefix /path/to/pantaxdbg_db \
-    --strain-min-reads 5.0 \
-    --strain-topk 5 \
-    --r1-large-n 100 \
-    --r1-topk-large 10 \
-    --r1-min-abundance 1e-7 \
-    --ref-info /path/to/example_profile_genome_info.txt \
-    --out /path/to/sample_profile_res \
-    --species-min-abundance 0.0 \
-    --threads 64 \
-    -k 31 \
-    2>&1 | tee sample.profile.log
-```
 
 ---
 
