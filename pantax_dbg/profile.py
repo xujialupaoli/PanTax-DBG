@@ -24,16 +24,14 @@ def _cleanup_intermediate_dirs(*paths):
         if p.exists() and p.is_dir():
             shutil.rmtree(p, ignore_errors=True)
 
-#修改了计算相对丰度的方式，主要用ggcat 还是ganon的判定方式修改了
+#
 # ==============================================================================
-# Helper: Filter and Renormalize (支持科学计数法识别与重新归一化)
+# Helper: Filter and Renormalize 
 # ==============================================================================
 
 def _filter_and_renormalize_abundance(input_path, output_path, min_val):
     """
-    1. 识别科学计数法 (如 1.7e-06)。
-    2. 过滤掉 abundance <= min_val 的行 (只保留严格大于阈值的行)。
-    3. 对剩余物种进行重新归一化 (Sum = 1)。
+
     """
     items = []
     total_abund = 0.0
@@ -80,7 +78,7 @@ def _filter_and_renormalize_abundance(input_path, output_path, min_val):
 
 
 def _count_non_empty_lines_skip_header(path):
-    """计算有效数据行数，自动尝试跳过非数字的表头"""
+    """"""
     count = 0
     if not Path(path).exists():
         return 0
@@ -242,7 +240,7 @@ def run_paired(reads, db_prefix, out_prefix,
         )
 
     # =========================================================
-    # [FILTER 1] Ganon 结果过滤 (用于减少 DBG 构建量)
+    # [FILTER 1] Ganon 
     # =========================================================
     
     target_species_file = ganon_species 
@@ -250,13 +248,13 @@ def run_paired(reads, db_prefix, out_prefix,
     if r1_min_abundance >= 0:
         filtered_species_file = work_ganon / f"species_abundance_r1_min{r1_min_abundance}.txt"
         
-        # 优化：如果这个过滤后的文件也存在，也可以跳过生成（可选，这里暂不跳过以防参数变更）
+        # 
         print(f"[PanTax-DBG] Filtering r1 species > {r1_min_abundance} for ccDBG...")
         _filter_and_renormalize_abundance(str(ganon_species), str(filtered_species_file), r1_min_abundance)
         
         target_species_file = filtered_species_file
 
-    # 3) 计算有效物种数量
+    # 3) 
     line_count = _count_non_empty_lines_skip_header(str(target_species_file))
     print(f"[PanTax-DBG] Effective species count for DBG: {line_count}")
 
@@ -293,7 +291,7 @@ def run_paired(reads, db_prefix, out_prefix,
     # 4) color_mapping
     color_map = work_db / "color_mapping.in"
     
-    # [新增优化] 跳过已存在的 color_mapping
+    # 
     if color_map.exists():
         print(f"[PanTax-DBG] Found existing color_mapping: {color_map}. Skipping.")
     else:
@@ -302,7 +300,7 @@ def run_paired(reads, db_prefix, out_prefix,
     # 5) ggcat build
     ggcat_db = work_db / "ggcatDB.fasta.lz4"
     
-    # [新增优化] 跳过已存在的 ggcat build
+    # 
     if ggcat_db.exists():
         print(f"[PanTax-DBG] Found existing ggcatDB: {ggcat_db}. Skipping build.")
     else:
@@ -321,18 +319,18 @@ def run_paired(reads, db_prefix, out_prefix,
     # 6) fastp 
     ggcat_reads = work_q / "reads_for_ggcat.fastq"
     
-    # [新增优化] 跳过已存在的 reads 文件
+    # 
     if ggcat_reads.exists():
         print(f"[PanTax-DBG] Found existing reads for ggcat: {ggcat_reads}. Skipping fastp.")
     else:
-        # 如果reads文件很大且已存在，可以考虑跳过，这里暂且保留覆盖逻辑以防reads损坏
+        # 
         _prepare_ggcat_reads_paired(r1, r2, str(ggcat_reads), threads=threads)
 
     # 7) ggcat query
     ggcat_prefix = work_q / "query_ggcatDB"
     
-    # [新增优化] 检查关键输出文件是否存在
-    # 我们检查最核心的 species_counts 和 strain_group_abundance，如果它们都在，大概率跑完了
+    # 
+    # 
     check_ggcat_outputs = [
         Path(f"{ggcat_prefix}.species_counts.tsv"),
         Path(f"{ggcat_prefix}.strain_group_abundance.tsv")
@@ -452,20 +450,17 @@ def run_paired(reads, db_prefix, out_prefix,
     # Final Output Organization (Species vs. Strain)
     # =========================================================
     
-    # 1. 准备文件路径
+    # 1. 
     raw_strain_abundance = Path(f"{strain_out_prefix}.abundance.tsv")
     final_strain_abundance = out_prefix / "strain_abundance.txt"
-    final_strain_tre = out_prefix / "tax_profile_strain.tre"  # 专门的菌株 TRE 文件名
+    final_strain_tre = out_prefix / "tax_profile_strain.tre"  # 
     
-    # 2. 拷贝菌株丰度文件到输出目录
+    # 2. 
     if raw_strain_abundance.exists():
         shutil.copyfile(raw_strain_abundance, final_strain_abundance)
         
-        # 3. 调用新写的模块生成 tax_profile_strain.tre
-        # 注意区分：
-        #   输入1 (Base Tree): ganon_tre (原始的 tax_profile.tre，包含完整物种树结构)
-        #   输入2 (Strain Data): final_strain_abundance (刚才计算出的准确菌株丰度)
-        #   输出  (Strain Tree): final_strain_tre (仅包含有效菌株及其父级的树)
+        # 3. 
+        
         
         _ts("tax_profile_strain_update").run(
             tax_profile=str(ganon_tre),
@@ -525,7 +520,7 @@ def run_single(reads, db_prefix, out_prefix,
     ganon_tre = work_ganon / "tax_profile.tre"
     ganon_species = work_ganon / "species_abundance.txt"
     ganon_strain = work_ganon / "strain_abundance.txt"
-    # 注意：Paired-end mode 原代码没有生成 predict_spy.ID.abundance
+    
 
     all_ganon_files_exist = (
         ganon_tre.exists() and 
@@ -592,11 +587,10 @@ def run_single(reads, db_prefix, out_prefix,
     # 6) ggcat query（raw read）
     ggcat_prefix = work_q / "query_ggcatDB"
     
-    # [优化] 单端模式的输出检查
+    # 
     check_ggcat_outputs_single = [
         Path(f"{ggcat_prefix}.species_counts.tsv"),
-        # Paired-end mode 可能没有 strain group abundance (原逻辑看起来没有相关后处理), 
-        # 但如果有的话也可以加，这里只检查 species_counts
+        
     ]
     if all(p.exists() for p in check_ggcat_outputs_single):
         print(f"[PanTax-DBG] Found existing GGCAT query results (Single). Skipping query.")
@@ -776,19 +770,19 @@ def _run_threshold_and_mix_for_paired(
                 continue
             fout.write(f"{parts[0]}\t{parts[5]}\n")
             try:
-                dbg_vals.append(float(parts[5])) # 收集丰度
+                dbg_vals.append(float(parts[5])) # 
             except ValueError: continue
 
-    # raw_mix 此时 weight=0，实际上输出的就是 GANON 格式化后的结果
+    # 
     raw_mix = f"{ggcat_prefix}.raw_filtered_abundance_prediction.tsv"
-    ganon_vals = [] # 新增：用于提取 GANON 的 Top 丰度
+    ganon_vals = [] 
     _ts("mix_predictions").run(
         dbg_file=dbg_tmp,
         ganon_file=ganon_predict_spy,
         weight=0.0,
         output=raw_mix,
     )
-    # 从 raw_mix 中读取 GANON 的丰度列表
+    
     with open(raw_mix, "r") as f:
         for line in f:
             p = line.strip().split("\t")
@@ -796,17 +790,17 @@ def _run_threshold_and_mix_for_paired(
                 try: ganon_vals.append(float(p[1]))
                 except ValueError: continue
 
-    # ====== 核心判断逻辑更新 ======
+    # 
     judge = _ts("judge_strategy")
     
-    # 1. 获取 Top1/Top2
+    # 1. 
     top1_ggcat, top2_ggcat = judge.get_top_two_abundance_from_list(dbg_vals)
     top1_ganon, top2_ganon = judge.get_top_two_abundance_from_list(ganon_vals)
     
-    # 2. 调用辅助脚本进行决策
+    # 2. 
     strategy = judge.calculate_decision(top1_ganon, top2_ganon, top1_ggcat, top2_ggcat)
     
-    # 3. 计算 TRE 权重 (保持原有逻辑，作为 GANON 策略时的 fallback)
+    # 3. 
     def tre_weight_calc(tre_file):
         w = 0.0; found = False
         try:
@@ -823,7 +817,7 @@ def _run_threshold_and_mix_for_paired(
 
     tre_w = tre_weight_calc(tre_file)
 
-    # 4. 根据决策分配最终权重
+    # 4. 
     if strategy == "GGCAT":
         weight = 1.0
     else:
@@ -831,7 +825,7 @@ def _run_threshold_and_mix_for_paired(
         
     print(f"[PanTax-DBG] Mixing Strategy: {strategy}, Final Weight: {weight:.6f} (i-logic applied)")
 
-    # ====== 混合输出结果 ======
+    # ======  ======
     final_tmp = f"{ggcat_prefix}.mix_abundance_prediction.tsv"
     _ts("mix_predictions").run(
         dbg_file=dbg_tmp,
