@@ -198,7 +198,7 @@ def build_parser():
         ),
     )
     required.add_argument(
-        "-o", "--output",
+        "-o", "--output", "--out",
         dest="out",
         required=True,
         metavar="DIR",

@@ -11,3 +11,5 @@ conda_build*.log
 __pycache__/
 *.pyc
 .pytest_cache/
+example/pantaxdbg_DB/
+example/profile_res/

@@ -46,14 +46,33 @@ Bioconda recommends using `conda-forge` with higher priority than `bioconda` and
 
 ```bash
 conda create -n pantaxdbg_env pantax-dbg \
-    -c conda-forge \
-    -c bioconda 
-    
+    --channel conda-forge \
+    --channel bioconda \
+    --strict-channel-priority
 
 conda activate pantaxdbg_env
 pantax-dbg -h
 ```
 
+`mamba` can be used as a drop-in replacement for `conda`.
+
+### Test a package downloaded from Bioconda CI
+
+For a package archive downloaded from a Bioconda pull-request build, unpack the local channel and install from it:
+
+```bash
+unzip linux-packages.zip
+
+mamba create -n pantaxdbg_env_v1
+mamba activate pantaxdbg_env_v1
+mamba install -c ./packages pantax-dbg
+
+pantax-dbg -h
+```
+
+For general users, the packaged conda installation is recommended because it installs the required compiled components together with the command-line interface. A plain `pip install .` installation only installs the Python wrapper and is not sufficient unless the bundled native backends are also available through `PANTAX_DBG_LIBEXEC`.
+
+---
 
 ## Commands
 
@@ -73,7 +92,7 @@ pantax-dbg profile -h
 
 ## Included example data
 
-The repository contains a runnable small example under `example/`:
+The repository contains a compact runnable example under `example/`. The example is intentionally small (approximately 3 MB) and is meant for installation checks and command-line familiarization rather than biological benchmarking.
 
 ```text
 example/
@@ -83,26 +102,22 @@ example/
 ├── HRGM2_example.names.dmp
 ├── HRGM2_example.nodes.dmp
 ├── my_genome_sizes.ncbi.tsv.gz
-├── pantaxdbg_DB/
+├── README.md
 ├── read1.fq
-├── read2.fq
-└── profile_res/
-    ├── species_abundance.txt
-    ├── strain_abundance.txt
-    ├── tax_profile.tre
-    └── tax_profile_strain.tre
+└── read2.fq
 ```
 
 | File or directory | Description |
 | --- | --- |
-| `genome/` | Genome FASTA files used to build the example database. |
+| `genome/` | Four genome FASTA files used to build the toy example database. |
 | `exampleDB_input_genomes.txt` | Headerless input manifest for `pantax-dbg build-custom`. |
 | `HRGM2_example.nodes.dmp`, `HRGM2_example.names.dmp` | Taxonomy files used during database construction. |
 | `my_genome_sizes.ncbi.tsv.gz` | Species genome-size information used for abundance calculation. |
-| `read1.fq`, `read2.fq` | Paired-end short-read test data. |
+| `read1.fq`, `read2.fq` | Small paired-end toy reads generated from the included genomes. |
 | `example_profile_genome_info.txt` | Reference-genome information table used in profiling. |
-| `pantaxdbg_DB/` | Directory for an example built database, when included with the release. |
-| `profile_res/` | Example profiling outputs. |
+| `README.md` | Step-by-step description of the included example. |
+| `pantaxdbg_DB/` | Database directory created by the build command below. It is not required to be present before running the example. |
+| `profile_res/` | Output directory created by the profiling command below. It is ignored by Git. |
 
 ---
 
@@ -157,11 +172,12 @@ pantax-dbg profile \
     --db-prefix example/pantaxdbg_DB/pantaxdbg_db \
     --strain-min-reads 5.0 \
     --strain-topk 5 \
+    --strain-div 5.0 \
     --r1-large-n 100 \
     --r1-topk-large 10 \
     --r1-min-abundance 1e-7 \
     --ref-info example/example_profile_genome_info.txt \
-    --out example/profile_res \
+    --output example/profile_res \
     --threads 16 \
     -k 31 
 ```
@@ -175,6 +191,27 @@ example/profile_res/tax_profile.tre
 example/profile_res/tax_profile_strain.tre
 ```
 
+For a production run with more threads:
+
+```bash
+/usr/bin/time -v -o sample.time.log \
+pantax-dbg profile \
+    -r read1.fq.gz \
+    -r read2.fq.gz \
+    --db-prefix /path/to/pantaxdbg_db \
+    --strain-min-reads 5.0 \
+    --strain-topk 5 \
+    --strain-div 5.0 \
+    --r1-large-n 100 \
+    --r1-topk-large 10 \
+    --r1-min-abundance 1e-7 \
+    --ref-info /path/to/example_profile_genome_info.txt \
+    --output /path/to/sample_profile_res \
+    --species-min-abundance 0.0 \
+    --threads 64 \
+    -k 31 \
+    2>&1 | tee sample.profile.log
+```
 
 ---
 
@@ -199,9 +236,9 @@ It is a **headerless, tab-delimited** file with three columns:
 Example:
 
 ```text
-/path/to/genome/GENOME000067.fna.gz	GENOME000067	9000000060
-/path/to/genome/GENOME000081.fna.gz	GENOME000081	9000000074
-/path/to/genome/GENOME000090.fna.gz	GENOME000090	9000000083
+example/genome/GENOME000067.fna.gz	GENOME000067	9000000060
+example/genome/GENOME000081.fna.gz	GENOME000081	9000000074
+example/genome/GENOME000090.fna.gz	GENOME000090	9000000083
 ```
 
 Requirements:
@@ -233,8 +270,8 @@ Example format:
 
 ```text
 strain_name	strain_taxid	species_taxid	species_name	genome_path
-GENOME000067	9000000060	42335	Species_A	/path/to/genome/GENOME000067.fna.gz
-GENOME000081	9000000074	43549	Species_B	/path/to/genome/GENOME000081.fna.gz
+GENOME000067	9000000060	42335	Species_A	example/genome/GENOME000067.fna.gz
+GENOME000081	9000000074	43549	Species_B	example/genome/GENOME000081.fna.gz
 ```
 
 The `--ref-info` table must correspond to the same genome collection and taxonomy used when building the database.
@@ -389,11 +426,12 @@ Frequently used options:
 | `-r` | Input read file. Supply exactly two paired-end read files by using `-r` twice. |
 | `--db-prefix` | Prefix of a database previously generated by `pantax-dbg build-custom`. |
 | `--ref-info` | Headered reference-genome information table for strain refinement. |
-| `--out` | Output directory for profiling results. |
+| `-o`, `--output`, `--out` | Output directory for profiling results. `--out` is kept as a compatibility alias for earlier scripts. |
 | `--threads` | Number of threads used for computation. |
 | `-k` | k-mer size used during graph-based refinement. |
 | `--strain-min-reads` | Minimum read-support threshold applied during strain-level filtering. |
 | `--strain-topk` | Maximum number of candidate strains retained per species in the corresponding refinement step. |
+| `--strain-div` | Divisor used in secondary strain-support filtering. |
 | `--r1-large-n` | Candidate-number threshold used to identify large candidate sets. |
 | `--r1-topk-large` | Number of top candidates retained for large candidate sets. |
 | `--r1-min-abundance` | Minimum abundance threshold used during first-round candidate selection. |
@@ -411,7 +449,7 @@ pantax-dbg profile \
     -r read2.fq.gz \
     --db-prefix /path/to/pantaxdbg_db \
     --ref-info /path/to/example_profile_genome_info.txt \
-    --out /path/to/profile_res \
+    --output /path/to/profile_res \
     --ggcat-temp-dir /tmp/pantax_dbg_${USER}_$$ \
     --threads 64 \
     -k 31

@@ -1,0 +1,5 @@
+strain_name	strain_taxid	species_taxid	species_name	genome_path
+GENOME029482	9000023784	19703	Methanomassiliicoccus_A intestinalis	example/genome/GENOME029482.fna.gz
+GENOME030794	9000024881	21691	Bifidobacterium angulatum	example/genome/GENOME030794.fna.gz
+GENOME127908	9000091645	19703	Methanomassiliicoccus_A intestinalis	example/genome/GENOME127908.fna.gz
+GENOME204591	9000135004	21691	Bifidobacterium angulatum	example/genome/GENOME204591.fna.gz
