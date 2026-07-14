@@ -14,6 +14,25 @@ from pathlib import Path
 from collections import defaultdict
 
 
+def resolve_genome_path(path_text: str, ref_info_file: Path) -> str:
+    """Return an absolute genome path for downstream ccDBG construction.
+
+    Relative paths in a ref-info table are interpreted from the current
+    PanTax-DBG working directory, with a fallback to the ref-info directory.
+    This prevents later graph-building steps, which run inside output
+    subdirectories, from resolving example genome paths incorrectly.
+    """
+    path = Path(path_text).expanduser()
+    if path.is_absolute():
+        return str(path)
+
+    cwd_path = (Path.cwd() / path).resolve()
+    if cwd_path.exists():
+        return str(cwd_path)
+
+    return str((ref_info_file.parent / path).resolve())
+
+
 # ----------------------
 # Read species set
 # ----------------------
@@ -81,6 +100,8 @@ def read_ref_mapping_taxid(ref_info_file: Path):
 
             if not strain_taxid or not species_taxid or not genome_path:
                 continue
+
+            genome_path = resolve_genome_path(genome_path, ref_info_file)
 
             if strain_taxid in mapping:
                 dup_taxid += 1

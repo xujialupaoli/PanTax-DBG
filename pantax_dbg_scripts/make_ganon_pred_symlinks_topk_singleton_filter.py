@@ -24,6 +24,25 @@ from pathlib import Path
 from collections import defaultdict
 
 
+def resolve_genome_path(path_text: str, ref_info_file: Path) -> str:
+    """Return an absolute genome path for downstream ccDBG construction.
+
+    Public examples often store genome paths relative to the directory from
+    which PanTax-DBG is executed.  The ccDBG step is launched from a nested
+    output directory, so keeping such paths relative would make them point to
+    the wrong location.  Resolve paths here while preserving absolute inputs.
+    """
+    path = Path(path_text).expanduser()
+    if path.is_absolute():
+        return str(path)
+
+    cwd_path = (Path.cwd() / path).resolve()
+    if cwd_path.exists():
+        return str(cwd_path)
+
+    return str((ref_info_file.parent / path).resolve())
+
+
 def read_species_set(ganon_species_file: Path):
     """Read species_taxid set from ganon species file (use column 1)."""
     species_set = set()
@@ -81,6 +100,8 @@ def read_ref_mapping_taxid(ref_info_file: Path):
 
             if not strain_taxid or not species_taxid or not genome_path:
                 continue
+
+            genome_path = resolve_genome_path(genome_path, ref_info_file)
 
             # If duplicates exist, keep the first and count duplicates (report later)
             if strain_taxid in mapping:
