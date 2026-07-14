@@ -46,9 +46,9 @@ Bioconda recommends using `conda-forge` with higher priority than `bioconda` and
 
 ```bash
 conda create -n pantaxdbg_env pantax-dbg \
-    --channel conda-forge \
-    --channel bioconda \
-    --strict-channel-priority
+    -c conda-forge \
+    -c bioconda 
+    
 
 conda activate pantaxdbg_env
 pantax-dbg -h
