@@ -51,26 +51,22 @@ conda create -n pantaxdbg_env pantax-dbg \
     --strict-channel-priority
 
 conda activate pantaxdbg_env
-pantax-dbg -h
-```
 
-`mamba` can be used as a drop-in replacement for `conda`.
-
-### Test a package downloaded from Bioconda CI
-
-For a package archive downloaded from a Bioconda pull-request build, unpack the local channel and install from it:
-
-```bash
-unzip linux-packages.zip
-
-mamba create -n pantaxdbg_env_v1
-mamba activate pantaxdbg_env_v1
-mamba install -c ./packages pantax-dbg
+# Make the bundled PanTax-DBG backend tools visible.
+export PATH="$CONDA_PREFIX/libexec/pantax-dbg:$PATH"
 
 pantax-dbg -h
 ```
 
 For general users, the packaged conda installation is recommended because it installs the required compiled components together with the command-line interface. A plain `pip install .` installation only installs the Python wrapper and is not sufficient unless the bundled native backends are also available through `PANTAX_DBG_LIBEXEC`.
+
+If database construction stops because a backend executable cannot be found, the conda environment is active but its bundled backend directory is not on `PATH`. Run:
+
+```bash
+export PATH="$CONDA_PREFIX/libexec/pantax-dbg:$PATH"
+```
+
+and repeat the command. To make this permanent for the environment, the same line can be added to the user's shell startup file or to a conda activation script.
 
 ---
 
@@ -127,6 +123,9 @@ Run the commands from the repository root:
 
 ```bash
 cd PanTax-DBG
+
+# Make the bundled PanTax-DBG backend tools visible.
+export PATH="$CONDA_PREFIX/libexec/pantax-dbg:$PATH"
 ```
 
 ### 1. Build a reference database

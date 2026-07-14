@@ -6,6 +6,9 @@ Run the commands below from the repository root:
 
 ```bash
 cd /path/to/PanTax-DBG
+
+# Make the bundled PanTax-DBG backend tools visible.
+export PATH="$CONDA_PREFIX/libexec/pantax-dbg:$PATH"
 ```
 
 ## Files
