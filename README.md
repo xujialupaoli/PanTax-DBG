@@ -54,17 +54,7 @@ conda activate pantaxdbg_env
 pantax-dbg -h
 ```
 
-`mamba` can be used as a drop-in replacement for `conda`:
 
-```bash
-mamba create -n pantaxdbg_env pantax-dbg \
-    --channel conda-forge \
-    --channel bioconda \
-    --strict-channel-priority
-
-mamba activate pantaxdbg_env
-pantax-dbg -h
-```
 ## Commands
 
 PanTax-DBG provides two public commands:
