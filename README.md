@@ -26,7 +26,6 @@
 - [Output files](#output-files)
   - [`species_abundance.txt`](#species_abundancetxt)
   - [`strain_abundance.txt`](#strain_abundancetxt)
-  - [`tax_profile.tre`](#tax_profiletre)
   - [`tax_profile_strain.tre`](#tax_profile_straintre)
 - [Common profiling options](#common-profiling-options)
 - [Temporary files and local scratch space](#temporary-files-and-local-scratch-space)
@@ -174,12 +173,11 @@ pantax-dbg profile \
     -k 31 
 ```
 
-The main outputs are:
+The principal abundance outputs are:
 
 ```text
 example/profile_res/species_abundance.txt
 example/profile_res/strain_abundance.txt
-example/profile_res/tax_profile.tre
 example/profile_res/tax_profile_strain.tre
 ```
 
@@ -309,7 +307,7 @@ Example:
 
 ## Output files
 
-The primary species and strain abundance tables report relative-abundance proportions. The hierarchical species tree retains the percentage scale of the taxonomic report, whereas the strain-refined tree reports proportions in its final column.
+The species and strain abundance tables report relative-abundance proportions on a 0–1 scale. The final column of the optional strain-resolved tree uses the same scale.
 
 ### `species_abundance.txt`
 
@@ -352,34 +350,9 @@ strain_taxid	strain_name	abundance
 
 This is the recommended file for downstream strain-level abundance analysis.
 
-### `tax_profile.tre`
-
-A headerless, tab-delimited hierarchical taxonomic abundance profile at non-strain ranks. It retains the nine-column cumulative report format.
-
-| Column | Description |
-| --- | --- |
-| 1 | Taxonomic rank, such as `superkingdom`, `phylum`, `class`, `order`, `family`, `genus`, or `species`. |
-| 2 | Taxonomic identifier. |
-| 3 | Taxonomic lineage represented as taxonomic identifiers separated by pipe characters. |
-| 4 | Taxon name. |
-| 5 | Number of reads assigned uniquely to the taxon. |
-| 6 | Number of reads assigned non-uniquely to the taxon after redistribution. |
-| 7 | Number of assignments contributed by descendant taxa. |
-| 8 | Cumulative assignments to the taxon and its descendants. |
-| 9 | Cumulative relative abundance on a percentage scale. |
-
-Example:
-
-```text
-root	1	1	root	0	0	240	240	100.00000
-no rank	4	1|4	cellular organisms	0	0	240	240	100.00000
-superkingdom	5	1|4|5	Archaea	0	0	120	120	51.58331
-phylum	24	1|4|5|24	Thermoplasmatota	0	0	120	120	51.58331
-```
-
 ### `tax_profile_strain.tre`
 
-A headerless, tab-delimited hierarchical taxonomic profile after strain-level abundance refinement. This file includes strain-resolved branches and preserves a nine-column tree format.
+An optional, headerless, tab-delimited hierarchical profile after strain-level abundance refinement. This file includes strain-resolved branches and uses a nine-column tree format.
 
 | Column | Description |
 | --- | --- |
@@ -387,11 +360,11 @@ A headerless, tab-delimited hierarchical taxonomic profile after strain-level ab
 | 2 | Taxonomic identifier. |
 | 3 | Taxonomic lineage represented as taxonomic identifiers separated by pipe characters. |
 | 4 | Taxon name. |
-| 5 | Support/count field retained in the hierarchical tree representation. |
-| 6 | Support/count field retained in the hierarchical tree representation. |
-| 7 | Support/count field retained in the hierarchical tree representation. |
-| 8 | Assigned or accumulated read-count field in the tree representation. |
-| 9 | Final relative abundance after strain-level refinement. |
+| 5 | Number of reads assigned uniquely to the taxon in the underlying taxonomic report. |
+| 6 | Number of shared or redistributed reads assigned directly to the taxon. |
+| 7 | Number of assignments contributed by descendant taxa. |
+| 8 | Cumulative read support for the taxon and its descendants. |
+| 9 | Final cumulative relative abundance after strain-level refinement, reported on a 0–1 scale. |
 
 Example:
 
@@ -403,7 +376,7 @@ phylum	24	1|4|5|24	Thermoplasmatota	0	0	120	120	0.5158331
 class	217	1|4|5|24|217	Thermoplasmata	0	0	120	120	0.5158331
 ```
 
-For most downstream statistical analyses, use `species_abundance.txt` or `strain_abundance.txt`; use the `.tre` files when a hierarchical taxonomic representation is required.
+For downstream abundance analyses, use `species_abundance.txt` or `strain_abundance.txt`. Use `tax_profile_strain.tre` only when a hierarchical strain-resolved representation is required. Values may differ from exactly 1 at the root by negligible floating-point rounding.
 
 ---
 

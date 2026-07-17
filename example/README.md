@@ -81,8 +81,7 @@ The main outputs are:
 ```text
 example/profile_res/species_abundance.txt
 example/profile_res/strain_abundance.txt
-example/profile_res/tax_profile.tre
 example/profile_res/tax_profile_strain.tre
 ```
 
-`species_abundance.txt` and `strain_abundance.txt` are the recommended files for downstream abundance analysis. The `.tre` files provide hierarchical taxonomic profiles.
+`species_abundance.txt` and `strain_abundance.txt` are the recommended files for downstream abundance analysis. `tax_profile_strain.tre` is an optional hierarchical strain-resolved profile.
