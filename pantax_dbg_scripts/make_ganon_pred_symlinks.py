@@ -4,7 +4,7 @@
 """
 PanTax-DBG helper (taxid-keyed):
 Filter predicted strains by species and Ref database,
-and output a species–strain mapping table (no symlinks).
+and output a species-to-strain mapping table (no symlinks).
 """
 
 import csv
@@ -47,7 +47,7 @@ def read_species_set(ganon_species_file: Path):
         else:
             h0 = ""
 
-        # header is real header → skip
+        # Skip a recognized header row.
         if not (h0 and ("species_taxid" in h0 or "species" in h0)):
             if header and str(header[0]).strip():
                 species_set.add(str(header[0]).strip())

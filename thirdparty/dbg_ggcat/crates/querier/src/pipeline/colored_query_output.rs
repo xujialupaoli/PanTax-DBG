@@ -68,7 +68,8 @@ fn species_of(name: &str) -> &str {
     name.splitn(2, '_').next().unwrap_or(name)
 }
 
-// strain_id = "_" 后半段；若没有 "_" 则退化为原串
+// Use the suffix after "_" as the strain identifier; retain the full string
+// when no separator is present.
 #[inline]
 fn strain_id_of(name: &str) -> &str {
     match name.splitn(2, '_').nth(1) {
@@ -77,7 +78,7 @@ fn strain_id_of(name: &str) -> &str {
     }
 }
 
-// 严格相等最大值 winners（浮点严格相等）
+// Return all candidates tied at the exact maximum support value.
 #[inline]
 fn winners_of_max_strict(matches: &[(String, f64)]) -> (f64, Vec<String>) {
     if matches.is_empty() {
@@ -97,7 +98,8 @@ fn winners_of_max_strict(matches: &[(String, f64)]) -> (f64, Vec<String>) {
     (best, wins)
 }
 
-/// 返回：决策 + winners（并列最大菌株集合；仅对保留 read 有意义）
+/// Return the decision and the set of strains tied at maximum support. The
+/// winner set is meaningful only for retained reads.
 #[inline]
 fn decide_species_and_winners(matches: &[(String, f64)], t: f64) -> (Decision, Vec<String>) {
     let (rmax, winners) = winners_of_max_strict(matches);
@@ -113,7 +115,7 @@ fn decide_species_and_winners(matches: &[(String, f64)], t: f64) -> (Decision, V
         return (Decision::Discard("no_match", String::new()), vec![]);
     }
 
-    // winners 的物种集合必须只有 1 个
+    // All maximum-supported strains must belong to one species.
     let mut sp_set: Vec<&str> = winners.iter().map(|w| species_of(w)).collect();
     sp_set.sort_unstable();
     sp_set.dedup();
@@ -128,7 +130,7 @@ fn decide_species_and_winners(matches: &[(String, f64)], t: f64) -> (Decision, V
     (Decision::Species(sp_set[0].to_string()), winners)
 }
 
-// ---------- 阈值采样逻辑 ----------
+// ---------- Adaptive-threshold sampling ----------
 
 const FIRST_N: usize = 50_000;
 const PCT: f64 = 0.30; // p30
@@ -194,8 +196,8 @@ struct StoredWinners {
     winners: Vec<String>, // max-tied genome names (within the same species)
 }
 
-// 将“同进同出（集合模式完全一致）”菌株合并成组：
-// 等价关系 = 出现在哪些 reads 的 winners 集合里完全相同
+// Group strains with identical read-support patterns. Two strains are
+// equivalent when they occur in exactly the same read-level winner sets.
 fn build_indistinguishable_groups(reads: &[StoredWinners]) -> Vec<Vec<String>> {
     // strain -> list of read positions where it appears (signature)
     let mut occ: HashMap<String, Vec<usize>> = HashMap::new();
@@ -217,18 +219,20 @@ fn build_indistinguishable_groups(reads: &[StoredWinners]) -> Vec<Vec<String>> {
     for g in &mut groups {
         g.sort();
     }
-    // 稳定输出
+    // Sort group members for deterministic output.
     groups.sort_by(|a, b| a[0].cmp(&b[0]));
     groups
 }
 
-// 每条 read 只知道候选组集合 G_r；做集合版 EM：w_{r,g} ∝ a_g
+// Each read identifies a candidate-group set G_r. Apply group-level EM with
+// read-to-group weights proportional to the current group abundances.
 fn em_over_groups(group_candidates_per_read: &[Vec<usize>], k: usize) -> (Vec<f64>, Vec<f64>) {
     if k == 0 || group_candidates_per_read.is_empty() {
         return (vec![], vec![]);
     }
 
-    // init a：用 singleton-read 的计数做轻微先验，否则均匀
+    // Initialize group abundance with a weak prior from singleton-group reads;
+    // use a uniform initialization when no such reads are available.
     let mut a = vec![1.0 / (k as f64); k];
     let mut anchor = vec![0usize; k];
     for cand in group_candidates_per_read {
@@ -327,16 +331,16 @@ struct GlobalAgg {
     // reason -> count
     reason_stats: HashMap<&'static str, usize>,
 
-    // paired：等待 mate 的决策（同时保存 winners）
+    // In paired mode, retain the decision and winner set until its mate arrives.
     pair_buffer: HashMap<usize, (Decision, Vec<String>)>,
 
-    // 阈值未确定前：暂存 (idx, matches)
+    // Buffer (query index, matches) pairs until the adaptive threshold is set.
     pending: Vec<(usize, Vec<(String, f64)>)>,
 
     sampler: RmaxSampler,
     threshold: Option<f64>,
 
-    // 只保存最终保留 reads：species -> [ (idx, winners_strains) ]
+    // Store only retained reads: species -> [(query index, winning strains)].
     kept_winners: HashMap<String, Vec<StoredWinners>>,
 }
 
@@ -383,7 +387,7 @@ impl GlobalAgg {
         }
     }
 
-    // paired: 要求两个 mate 同物种才 +2
+    // In paired mode, count both mates only when they support the same species.
     fn merge_pair(&mut self, idx: usize, dec: Decision, winners: Vec<String>) {
         let mate = if idx % 2 == 0 { idx + 1 } else { idx - 1 };
 
@@ -457,7 +461,7 @@ impl GlobalAgg {
 }
 
 // =============================
-// 主入口
+// Main entry point
 // =============================
 
 pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
@@ -486,13 +490,13 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
     colored_query_buckets.reverse();
     let buckets_channel = Mutex::new(colored_query_buckets);
 
-    // ===== 可选 JSONL 输出 =====
+    // ===== Optional JSONL output =====
     let (maybe_query_output, output_sync_condvar, output_path_final): (
         Option<Mutex<(BufWriter<QueryOutputFileWriter>, usize)>>,
         Option<Condvar>,
         Option<PathBuf>,
     ) = if emit_jsonl {
-        // 用 output_path 避免和入参 output_file 混淆
+        // Use output_path to distinguish the resolved path from output_file.
         let output_path: PathBuf = if output_file.extension().is_none() {
             output_file.with_extension("jsonl")
         } else {
@@ -525,7 +529,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
         (None, None, None)
     };
 
-    // ===== 全局聚合 =====
+    // ===== Global aggregation =====
     let global_agg = Mutex::new(GlobalAgg::new(is_paired));
 
     (0..rayon::current_num_threads()).into_par_iter().for_each(|_| {
@@ -598,7 +602,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
 
             let bucket_index = input.index;
 
-            // JSONL 中间流（按 bucket 写）
+            // Write the intermediate JSONL stream by bucket.
             let mut maybe_compressed_stream: Option<CompressedBinaryWriter> = if emit_jsonl {
                 Some(CompressedBinaryWriter::new(
                     &temp_dir.join("query-data"),
@@ -616,7 +620,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
 
             let mut jsonline_buffer = vec![];
 
-            // 遍历当前 bucket 的 queries
+            // Process the queries in the current bucket.
             for (query, mut query_colors_list_index) in
                 queries_results.iter().enumerate().filter_map(|(i, r)| {
                     if r.0 != epoch {
@@ -635,7 +639,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
                 }
                 temp_colors_list.sort_unstable_by_key(|r| r.0);
 
-                // 2) 聚合同色 => fraction，构建 matches
+                // 2) Aggregate identical colors into support fractions and build matches.
                 let mut matches: Vec<(String, f64)> = Vec::new();
                 for grp in temp_colors_list.nq_group_by(|a, b| a.0 == b.0) {
                     let color_index = grp[0].0;
@@ -653,7 +657,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
                     matches.push((key, frac));
                 }
 
-                // 3) 收集 Rmax + pending（后面统一按阈值判）
+                // 3) Collect maximum support and pending queries for thresholding.
                 let mut rmax = 0.0f64;
                 for &(_, v) in &matches {
                     if v > rmax {
@@ -663,7 +667,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
                 local_rmax.push(rmax);
                 local_pending.push((query, matches.clone()));
 
-                // 4) 可选：写 JSONL 行（原样输出所有 matches）
+                // 4) Optionally write all matches to JSONL without further filtering.
                 if let Some(ref mut stream) = maybe_compressed_stream {
                     if emit_jsonl {
                         jsonline_buffer.clear();
@@ -680,7 +684,8 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
                 }
             }
 
-            // 5) 合并采样 / 决策：样本满 FIRST_N 后立刻确定阈值并逐桶决策
+            // 5) Merge threshold samples. Once FIRST_N observations are available,
+            // set the threshold and make decisions bucket by bucket.
             {
                 let mut g = global_agg.lock();
 
@@ -709,8 +714,8 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
                 }
             }
 
-            // 6) 如果有 JSONL，则把本 bucket 流合并进最终文件（按 bucket 顺序串行写入）
-            if let (Some(mut stream), Some(ref condvar), Some(ref query_output)) =
+            // 6) Append this bucket's JSONL stream to the final file in bucket order.
+            if let (Some(stream), Some(ref condvar), Some(ref query_output)) =
                 (maybe_compressed_stream, output_sync_condvar.as_ref(), maybe_query_output.as_ref())
             {
                 let stream_path = stream.get_path();
@@ -735,7 +740,8 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
         }
     });
 
-    // ===== 收尾：若阈值尚未确定（总 reads < FIRST_N），一次性确定 + 决策 pending =====
+    // ===== Finalization: if fewer than FIRST_N reads were observed, set the
+    // threshold from all available observations and resolve pending queries. =====
     let mut g = global_agg.lock();
 
     let t = if let Some(t) = g.threshold {
@@ -752,10 +758,10 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
         t
     };
 
-    // paired 模式下处理没等到 mate 的 read
+    // Resolve reads whose mates were not observed in paired mode.
     g.finalize_orphans();
 
-    // 基名：emit_jsonl=true 用 JSONL 前缀，否则用传入的 output_file
+    // Use the JSONL prefix as the base name when enabled; otherwise use output_file.
     let base = if let Some(p) = output_path_final.as_ref() {
         p.with_extension("")
     } else {
@@ -772,11 +778,12 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
         base.file_name().unwrap().to_string_lossy()
     ));
 
-    // 组输出
+    // Write strain-group output.
     let strain_group_map_out = base.with_extension("strain_group_map.tsv");
     let strain_group_abund_out = base.with_extension("strain_group_abundance.tsv");
 
-    // 你要的新输出：可区分菌株单独输出，不可区分按组输出（strain_id 用 ; 连接）
+    // Report distinguishable strains individually and unresolved strains as
+    // semicolon-delimited groups.
     let distinguishable_out = base.with_extension("distinguishable_strains.tsv");
     let read_candidates_out = base.with_extension("read_group_candidates.tsv");
 
@@ -839,7 +846,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
         writeln!(w, "kept_species_reads={}", kept)?;
     }
 
-    // 4) 组 + EM + distinguishable_strains.tsv
+    // 4) Build strain groups, run group-level EM and write distinguishable_strains.tsv.
     {
         let mut wmap = File::create(&strain_group_map_out)?;
         let mut wab = File::create(&strain_group_abund_out)?;
@@ -850,7 +857,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
         writeln!(wab, "species\tgroup_id\tassigned_reads\trel_abundance_within_species\tstrains")?;
         writeln!(wdist, "species\tstrain_id\tassigned_reads\trel_abundance_within_species")?;
 
-        // 新增：每条 read 的候选组（只对最终保留的 reads）
+        // Candidate groups per read, restricted to reads retained in the final set.
         writeln!(wrcand, "species\tread_idx\tcandidate_groups\twinner_strains")?;
 
         let mut species_list: Vec<String> = g.kept_winners.keys().cloned().collect();
@@ -863,7 +870,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
             };
             if reads.is_empty() { continue; }
 
-            // 4.1 分组：同进同出 => 合并
+            // 4.1 Group strains with identical retained-read support patterns.
             let groups = build_indistinguishable_groups(reads);
             let k = groups.len();
             if k == 0 { continue; }
@@ -876,13 +883,13 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
                 }
             }
 
-            // 输出组映射
+            // Write the strain-to-group mapping.
             for (gi, strains) in groups.iter().enumerate() {
                 let group_id = format!("G{}", gi + 1);
                 writeln!(wmap, "{}\t{}\t{}", sp, group_id, strains.join(","))?;
             }
 
-            // 4.2 每条 read 的候选组集合（由 winners 映射得到）
+            // 4.2 Map each read's winner set to its candidate-group set.
             let mut cand_per_read: Vec<Vec<usize>> = Vec::with_capacity(reads.len());
             for r in reads {
                 let mut c: Vec<usize> = r
@@ -893,7 +900,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
                 c.sort_unstable();
                 c.dedup();
 
-                // ★新增输出：每条 read 的候选 group 列表
+                // Write the candidate-group list for each retained read.
                 let cand_str = c
                     .iter()
                     .map(|gi| format!("G{}", gi + 1))
@@ -907,7 +914,7 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
                 cand_per_read.push(c);
             }
 
-            // 4.3 组层面 EM（你原来的不变）
+            // 4.3 Estimate relative support at the strain-group level by EM.
             let (_a, counts) = em_over_groups(&cand_per_read, k);
             let sumc: f64 = counts.iter().sum();
             if sumc <= 0.0 { continue; }
@@ -930,7 +937,8 @@ pub fn colored_query_output<MH: HashFunctionFactory, CX: ColorsManager>(
                     sp, group_id, assigned, rel, strains.join(",")
                 )?;
 
-                // 你原来 distinguishable 输出逻辑不变（singleton 输出一个；组输出多个用 ;）
+                // Emit singleton groups as individual strains and unresolved groups
+                // as semicolon-delimited strain identifiers.
                 let mut ids: Vec<String> = strains.iter().map(|x| strain_id_of(x).to_string()).collect();
                 ids.sort();
                 ids.dedup();

@@ -2,7 +2,7 @@
 # ganon
 # =============================================================================
 
-# ！！！把 3.4 改成 >= 3.20，避免 “compatibility with CMake < 3.5 removed” 报错
+# Require a recent CMake version to avoid legacy compatibility errors.
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(ganon VERSION 2.1.0 LANGUAGES CXX)
 
@@ -21,7 +21,7 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 endif()
 
 option(VERBOSE_CONFIG "Verbose mode for quick build setup debugging" OFF)
-option(CONDA "Flag for compilation in conda env." ON)         # ★ 在 conda 中构建，避免 -static -march=native
+option(CONDA "Flag for compilation in conda env." ON)         # Avoid -static and -march=native in Conda builds.
 option(LONGREADS "Use uint32_t for very long reads" OFF)
 option(INCLUDE_DIRS "Extra include dirs" "")
 
@@ -44,10 +44,10 @@ else()
     endif()
 endif()
 
-# 覆盖 O3 等由外层注入的 flags 即可，不强制写死，避免和 conda 的 C(XX)FLAGS 冲突
+# Allow externally supplied optimization flags to avoid conflicts with Conda C(XX)FLAGS.
 # set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
-# Coverage（保留即可）
+# Coverage configuration
 set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} -O0 --coverage")
 set(CMAKE_EXE_LINKER_FLAGS_COVERAGE "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -lgcov --coverage")
 
@@ -60,7 +60,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     add_compile_options(-Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wuseless-cast)
 endif()
 
-# ★ 在 conda 环境中构建，不加 -static -march=native（原仓库里是 if(NOT CONDA) 才加）
+# Conda builds intentionally omit -static and -march=native.
 if(LONGREADS)
     add_compile_options(-DLONGREADS)
 endif()
@@ -71,26 +71,26 @@ endif()
 
 find_package(Threads REQUIRED)
 
-# cxxopts（用 vendor）
+# Vendored cxxopts
 add_library(cxxopts INTERFACE)
 target_include_directories(cxxopts SYSTEM INTERFACE libs/cxxopts/include)
 
 find_package(BZip2 REQUIRED)
 find_package(ZLIB REQUIRED)
 
-# ★ 关键：强制使用 vendor 的 seqan3（它自带 build_system）
-#    不再依赖 conda 的 seqan3；通过在 CMAKE_PREFIX_PATH 里插入 vendor 的 build_system 来让 find_package 命中
+# Use the vendored SeqAn3 package and its bundled build system.
+# Prepend the vendored build-system path so that find_package resolves it consistently.
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/libs/seqan3/build_system")
-# 如果你的 GCC 比 seqan3 官方支持新（例如 13+），建议加此定义，抑制诊断
+# Suppress the SeqAn3 diagnostic when compiling with a newer supported GCC toolchain.
 add_compile_definitions(SEQAN3_DISABLE_NEWER_COMPILER_DIAGNOSTIC=1)
 find_package(seqan3 3.3.0 REQUIRED)
 
-# robin-hood-hashing（用 vendor）
+# Vendored robin-hood-hashing
 add_library(robin-hood-hashing INTERFACE)
 target_include_directories(robin-hood-hashing SYSTEM INTERFACE libs/robin-hood-hashing/src/include)
 
 # ----------------------------------------------------------------------------- 
-# verbose (可选)
+# Optional verbose configuration
 # -----------------------------------------------------------------------------
 
 if(VERBOSE_CONFIG)
@@ -104,5 +104,5 @@ endif()
 # targets
 # -----------------------------------------------------------------------------
 
-# ★ 完全禁用 tests：不要 enable_testing()/add_subdirectory(tests)
+# Tests are excluded from the bundled production build.
 add_subdirectory(src)

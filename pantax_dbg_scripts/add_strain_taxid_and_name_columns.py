@@ -72,9 +72,9 @@ def read_new2info(map_path: str, delim: str = "\t") -> Dict[str, Tuple[str, str]
                 continue
             m[new_id] = (taxid, name)
 
-        # 不强制报错，但给使用者一个提示会更安全
+        # Keep the first mapping but warn the user about duplicate identifiers.
         if dup:
-            # 不用 print 到 stdout，以免影响上游捕获
+            # Write the warning to stderr so that stdout remains machine-readable.
             import sys
             print(f"[Warning] {dup} duplicated new_strain_taxid in map were ignored (kept first).", file=sys.stderr)
 

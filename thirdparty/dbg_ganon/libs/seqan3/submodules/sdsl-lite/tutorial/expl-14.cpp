@@ -10,7 +10,7 @@ using namespace sdsl;
 int main()
 {
     wt_hutu<rrr_vector<63>> wt;
-    construct_im(wt, "こんにちは世界", 1);
+    construct_im(wt, "\u3053\u3093\u306B\u3061\u306F\u4E16\u754C", 1);
     for (size_t i = 0; i < wt.size(); ++i)
         cout << wt[i];
     cout << endl;

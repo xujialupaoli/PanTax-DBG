@@ -6,6 +6,9 @@ thirdparty.backup_*/
 conda-recipe.backup_*/
 pantax_dbg.egg-info/
 *.egg-info/
+/build/
+/dist/
+/Raptor_usr.timestamp
 conda_build*.log
 *.log
 __pycache__/

@@ -14,9 +14,8 @@ def _read_species_abundance(
     Read a two-column TSV:
         species_id <tab> abundance
 
-    PanTax-DBG final species_abundance.txt is expected to have NO header.
-    This reader is tolerant: if a header exists, it will be skipped
-    when abundance value cannot be parsed as float.
+    PanTax-DBG species-abundance files may contain a header. Header and
+    malformed rows are skipped when the abundance value is not numeric.
     """
     abundance_file = Path(abundance_file)
     d: Dict[str, float] = {}
@@ -57,7 +56,8 @@ def rebuild_tax_profile_with_species_abundance(
       - default output directory = species_abundance.txt directory
       - default output filename = tax_profile.tre
 
-    The logic follows your original standalone script.
+    Abundances at higher ranks are obtained by summing retained descendant
+    species, and zero-abundance branches are omitted.
     """
     tax_profile = Path(tax_profile)
     species_abundance = Path(species_abundance)

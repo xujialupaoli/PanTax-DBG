@@ -10,9 +10,9 @@ using namespace sdsl;
 
 int main()
 {
-    csa_wt<wt_huff<rrr_vector<63>>, 4, 8> csa; // 接尾辞配列
+    csa_wt<wt_huff<rrr_vector<63>>, 4, 8> csa; // Compressed suffix array
     construct(csa, "expl-18.cpp", 1);
-    cout << "count(\"配列\") : " << count(csa, "配列") << endl;
+    cout << "count(\"\u914D\u5217\") : " << count(csa, "\u914D\u5217") << endl;
     auto occs = locate(csa, "\n");
     sort(occs.begin(), occs.end());
     auto max_line_length = occs[0];

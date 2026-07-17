@@ -497,13 +497,13 @@ fn convert_querier_step(step: QuerierStartingStep) -> querier::QuerierStartingSt
 fn run_querier_from_args(instance: &GGCATInstance, args: QueryArgs) -> PathBuf {
     *ggcat_api::debug::DEBUG_QUERIER_FIRST_STEP.lock() = convert_querier_step(args.step);
 
-    // 新增：根据命令行决定是否按 paired 模式
+    // Select paired or single-read processing from the command-line options.
     let is_paired = if args.single {
         false
     } else if args.paired {
         true
     } else {
-        true // 默认行为：兼容旧版，当成 paired-end
+        true // Preserve the legacy default of paired-end processing.
     };
 
     let format = match args

@@ -255,7 +255,7 @@ optional arguments:
   <summary>ganon build-custom</summary>
 
 ```
-usage: themis build-custom [-h] [-i [...]] [-e] [-c] [-n] [-a] [-l] [-m [...]] [-z [...]] [--skip-genome-size] [-r [...]]
+usage: pantax-dbg build-custom [-h] [-i [...]] [-e] [-c] [-n] [-a] [-l] [-m [...]] [-z [...]] [--skip-genome-size] [-r [...]]
                           [-q [...]] -d DB_PREFIX [-x] [-t] [-p] [-k] [-w] [-s] [-f] [-j] [-y] [-v] [--restart]
                           [--verbose] [--quiet] [--write-info-file]
 

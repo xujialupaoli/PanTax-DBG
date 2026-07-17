@@ -5,14 +5,19 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pantax-dbg"
 version = "0.1.0"
-description = "PanTax-DBG: a species- and strain-level metagenomic profiler using DBG-based refinement"
+description = "Species- and strain-level metagenomic profiling with ccDBG refinement"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 authors = [
   {name = "Jialu Xu"}
 ]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/xujialupaoli/PanTax-DBG"
+Repository = "https://github.com/xujialupaoli/PanTax-DBG"
+Issues = "https://github.com/xujialupaoli/PanTax-DBG/issues"
 
 [project.scripts]
 pantax-dbg = "pantax_dbg.cli:main"

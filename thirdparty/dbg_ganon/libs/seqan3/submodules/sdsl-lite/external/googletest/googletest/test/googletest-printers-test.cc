@@ -522,13 +522,13 @@ TEST(PrintCStringTest, EscapesProperly) {
 #ifdef __cpp_char8_t
 // const char8_t*.
 TEST(PrintU8StringTest, Const) {
-  const char8_t* p = u8"界";
+  const char8_t* p = u8"\u754C";
   EXPECT_EQ(PrintPointer(p) + " pointing to u8\"\\xE7\\x95\\x8C\"", Print(p));
 }
 
 // char8_t*.
 TEST(PrintU8StringTest, NonConst) {
-  char8_t p[] = u8"世";
+  char8_t p[] = u8"\u4E16";
   EXPECT_EQ(PrintPointer(p) + " pointing to u8\"\\xE4\\xB8\\x96\"",
             Print(static_cast<char8_t*>(p)));
 }
@@ -541,7 +541,7 @@ TEST(PrintU8StringTest, Null) {
 
 // Tests that u8 strings are escaped properly.
 TEST(PrintU8StringTest, EscapesProperly) {
-  const char8_t* p = u8"'\"?\\\a\b\f\n\r\t\v\x7F\xFF hello 世界";
+  const char8_t* p = u8"'\"?\\\a\b\f\n\r\t\v\x7F\xFF hello \u4E16\u754C";
   EXPECT_EQ(PrintPointer(p) +
                 " pointing to u8\"'\\\"?\\\\\\a\\b\\f\\n\\r\\t\\v\\x7F\\xFF "
                 "hello \\xE4\\xB8\\x96\\xE7\\x95\\x8C\"",
@@ -551,13 +551,13 @@ TEST(PrintU8StringTest, EscapesProperly) {
 
 // const char16_t*.
 TEST(PrintU16StringTest, Const) {
-  const char16_t* p = u"界";
+  const char16_t* p = u"\u754C";
   EXPECT_EQ(PrintPointer(p) + " pointing to u\"\\x754C\"", Print(p));
 }
 
 // char16_t*.
 TEST(PrintU16StringTest, NonConst) {
-  char16_t p[] = u"世";
+  char16_t p[] = u"\u4E16";
   EXPECT_EQ(PrintPointer(p) + " pointing to u\"\\x4E16\"",
             Print(static_cast<char16_t*>(p)));
 }
@@ -570,7 +570,7 @@ TEST(PrintU16StringTest, Null) {
 
 // Tests that u16 strings are escaped properly.
 TEST(PrintU16StringTest, EscapesProperly) {
-  const char16_t* p = u"'\"?\\\a\b\f\n\r\t\v\x7F\xFF hello 世界";
+  const char16_t* p = u"'\"?\\\a\b\f\n\r\t\v\x7F\xFF hello \u4E16\u754C";
   EXPECT_EQ(PrintPointer(p) +
                 " pointing to u\"'\\\"?\\\\\\a\\b\\f\\n\\r\\t\\v\\x7F\\xFF "
                 "hello \\x4E16\\x754C\"",
@@ -826,7 +826,7 @@ TEST(PrintArrayTest, Char8ArrayWithNoTerminatingNul) {
 
 // char8_t array with terminating NUL.
 TEST(PrintArrayTest, Char8ArrayWithTerminatingNul) {
-  const char8_t a[] = u8"\0世界";
+  const char8_t a[] = u8"\0\u4E16\u754C";
   EXPECT_EQ("u8\"\\0\\xE4\\xB8\\x96\\xE7\\x95\\x8C\"", PrintArrayHelper(a));
 }
 #endif
@@ -834,14 +834,14 @@ TEST(PrintArrayTest, Char8ArrayWithTerminatingNul) {
 // const char16_t array without terminating NUL.
 TEST(PrintArrayTest, Char16ArrayWithNoTerminatingNul) {
   // Array a contains '\0' in the middle and doesn't end with '\0'.
-  const char16_t a[] = {u'こ', u'\0', u'ん', u'に', u'ち', u'は'};
+  const char16_t a[] = {u'\u3053', u'\0', u'\u3093', u'\u306B', u'\u3061', u'\u306F'};
   EXPECT_EQ("u\"\\x3053\\0\\x3093\\x306B\\x3061\\x306F\" (no terminating NUL)",
             PrintArrayHelper(a));
 }
 
 // char16_t array with terminating NUL.
 TEST(PrintArrayTest, Char16ArrayWithTerminatingNul) {
-  const char16_t a[] = u"\0こんにちは";
+  const char16_t a[] = u"\0\u3053\u3093\u306B\u3061\u306F";
   EXPECT_EQ("u\"\\0\\x3053\\x3093\\x306B\\x3061\\x306F\"", PrintArrayHelper(a));
 }
 
@@ -938,14 +938,14 @@ TEST(PrintWideStringTest, StringAmbiguousHex) {
 
 #ifdef __cpp_char8_t
 TEST(PrintStringTest, U8String) {
-  std::u8string str = u8"Hello, 世界";
+  std::u8string str = u8"Hello, \u4E16\u754C";
   EXPECT_EQ(str, str);  // Verify EXPECT_EQ compiles with this type.
   EXPECT_EQ("u8\"Hello, \\xE4\\xB8\\x96\\xE7\\x95\\x8C\"", Print(str));
 }
 #endif
 
 TEST(PrintStringTest, U16String) {
-  std::u16string str = u"Hello, 世界";
+  std::u16string str = u"Hello, \u4E16\u754C";
   EXPECT_EQ(str, str);  // Verify EXPECT_EQ compiles with this type.
   EXPECT_EQ("u\"Hello, \\x4E16\\x754C\"", Print(str));
 }

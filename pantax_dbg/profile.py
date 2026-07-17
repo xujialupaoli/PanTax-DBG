@@ -24,15 +24,12 @@ def _cleanup_intermediate_dirs(*paths):
         if p.exists() and p.is_dir():
             shutil.rmtree(p, ignore_errors=True)
 
-#
 # ==============================================================================
-# Helper: Filter and Renormalize 
+# Helpers
 # ==============================================================================
 
 def _filter_and_renormalize_abundance(input_path, output_path, min_val):
-    """
-
-    """
+    """Filter a two-column abundance table and renormalize retained values."""
     items = []
     total_abund = 0.0
     
@@ -78,7 +75,7 @@ def _filter_and_renormalize_abundance(input_path, output_path, min_val):
 
 
 def _count_non_empty_lines_skip_header(path):
-    """"""
+    """Count rows whose second column contains a numeric value."""
     count = 0
     if not Path(path).exists():
         return 0
@@ -239,22 +236,18 @@ def run_paired(reads, db_prefix, out_prefix,
             force=False,
         )
 
-    # =========================================================
-    # [FILTER 1] Ganon 
-    # =========================================================
-    
-    target_species_file = ganon_species 
+    # Filter first-stage candidates before ccDBG refinement.
+    target_species_file = ganon_species
 
     if r1_min_abundance >= 0:
         filtered_species_file = work_ganon / f"species_abundance_r1_min{r1_min_abundance}.txt"
         
-        # 
         print(f"[PanTax-DBG] Filtering r1 species > {r1_min_abundance} for ccDBG...")
         _filter_and_renormalize_abundance(str(ganon_species), str(filtered_species_file), r1_min_abundance)
         
         target_species_file = filtered_species_file
 
-    # 3) 
+    # Select the candidate-genome panel for graph construction.
     line_count = _count_non_empty_lines_skip_header(str(target_species_file))
     print(f"[PanTax-DBG] Effective species count for DBG: {line_count}")
 
@@ -288,19 +281,17 @@ def run_paired(reads, db_prefix, out_prefix,
         _cleanup_intermediate_dirs(work_ganon, work_db, work_q, out_prefix / ".temp_files")
         return str(final_abundance)
 
-    # 4) color_mapping
+    # Build the mapping from graph colors to candidate genomes.
     color_map = work_db / "color_mapping.in"
-    
-    # 
+
     if color_map.exists():
         print(f"[PanTax-DBG] Found existing color_mapping: {color_map}. Skipping.")
     else:
         _make_color_mapping_from_mapping_tsv(str(tmp_id_table), str(color_map))
 
-    # 5) ggcat build
+    # Build a sample-specific ccDBG for the retained genomes.
     ggcat_db = work_db / "ggcatDB.fasta.lz4"
-    
-    # 
+
     if ggcat_db.exists():
         print(f"[PanTax-DBG] Found existing ggcatDB: {ggcat_db}. Skipping build.")
     else:
@@ -316,21 +307,17 @@ def run_paired(reads, db_prefix, out_prefix,
             intermediate_compression_level=ggcat_intermediate_compression_level,
         )
 
-    # 6) fastp 
+    # Interleave and preprocess paired reads for graph queries.
     ggcat_reads = work_q / "reads_for_ggcat.fastq"
-    
-    # 
+
     if ggcat_reads.exists():
         print(f"[PanTax-DBG] Found existing reads for ggcat: {ggcat_reads}. Skipping fastp.")
     else:
-        # 
         _prepare_ggcat_reads_paired(r1, r2, str(ggcat_reads), threads=threads)
 
-    # 7) ggcat query
+    # Query reads against the sample-specific ccDBG.
     ggcat_prefix = work_q / "query_ggcatDB"
-    
-    # 
-    # 
+
     check_ggcat_outputs = [
         Path(f"{ggcat_prefix}.species_counts.tsv"),
         Path(f"{ggcat_prefix}.strain_group_abundance.tsv")
@@ -453,7 +440,7 @@ def run_paired(reads, db_prefix, out_prefix,
     # 1. 
     raw_strain_abundance = Path(f"{strain_out_prefix}.abundance.tsv")
     final_strain_abundance = out_prefix / "strain_abundance.txt"
-    final_strain_tre = out_prefix / "tax_profile_strain.tre"  # 
+    final_strain_tre = out_prefix / "tax_profile_strain.tre"
     
     # 2. 
     if raw_strain_abundance.exists():
@@ -472,10 +459,11 @@ def run_paired(reads, db_prefix, out_prefix,
 
     Path(temp_mix_abundance).unlink(missing_ok=True)
 
-    # Copy the final species-level tree out of the internal working directory
-    # before removing intermediate files.
+    # The reconstruction step above normally creates the final five-column
+    # species tree. Fall back to the original tree only if reconstruction did
+    # not produce an output file.
     final_species_tre = out_prefix / "tax_profile.tre"
-    if ganon_tre.exists():
+    if not final_species_tre.exists() and ganon_tre.exists():
         shutil.copyfile(ganon_tre, final_species_tre)
 
     # Keep only user-facing final outputs after a successful paired-end run.
@@ -548,7 +536,7 @@ def run_single(reads, db_prefix, out_prefix,
             strain_out=str(ganon_strain),
         )
 
-    # 3) species/strain + ref_info → tmp_id_table
+    # Select species and strains from the reference-information table.
     tmp_tsv = work_db / "ganon_species_strain_selected.tsv"
     tmp_id_table = work_q / "tmp_id_table.tsv"
 
@@ -584,10 +572,9 @@ def run_single(reads, db_prefix, out_prefix,
             intermediate_compression_level=ggcat_intermediate_compression_level,
         )
 
-    # 6) ggcat query（raw read）
+    # Query single reads against the sample-specific ccDBG.
     ggcat_prefix = work_q / "query_ggcatDB"
-    
-    # 
+
     check_ggcat_outputs_single = [
         Path(f"{ggcat_prefix}.species_counts.tsv"),
         
@@ -604,7 +591,7 @@ def run_single(reads, db_prefix, out_prefix,
             single=True,
         )
 
-    # 7) threshold + length-corrected abundance（no mix）
+    # Apply the adaptive threshold and length correction without integration.
     temp_abundance = out_prefix / "species_abundance.raw.txt"
     _run_threshold_and_lc_for_single(
         ggcat_prefix=str(ggcat_prefix),
@@ -638,7 +625,7 @@ def run_single(reads, db_prefix, out_prefix,
     
     Path(temp_abundance).unlink(missing_ok=True)
 
-    print(f"[PanTax-DBG] Single-end profiling done → {final_abundance}")
+    print(f"[PanTax-DBG] Single-end profiling completed: {final_abundance}")
     return str(final_abundance)
 
 # =========================
@@ -758,7 +745,7 @@ def _run_threshold_and_mix_for_paired(
     )
 
     dbg_tmp = f"{abund_more}.tmp"
-    dbg_vals = [] # 新增：用于提取 GGCAT 的 Top 丰度
+    dbg_vals = []  # Collect the leading GGCAT abundance estimates.
     with open(abund_more, "r", encoding="utf-8", errors="ignore") as fin, \
          open(dbg_tmp, "w", encoding="utf-8") as fout:
         header = fin.readline()
@@ -770,10 +757,11 @@ def _run_threshold_and_mix_for_paired(
                 continue
             fout.write(f"{parts[0]}\t{parts[5]}\n")
             try:
-                dbg_vals.append(float(parts[5])) # 
-            except ValueError: continue
+                dbg_vals.append(float(parts[5]))
+            except ValueError:
+                continue
 
-    # 
+    # Obtain the first-stage profile on the same graph-retained species set.
     raw_mix = f"{ggcat_prefix}.raw_filtered_abundance_prediction.tsv"
     ganon_vals = [] 
     _ts("mix_predictions").run(
@@ -790,17 +778,16 @@ def _run_threshold_and_mix_for_paired(
                 try: ganon_vals.append(float(p[1]))
                 except ValueError: continue
 
-    # 
     judge = _ts("judge_strategy")
-    
-    # 1. 
+
+    # Compare the concentration of the leading abundance estimates.
     top1_ggcat, top2_ggcat = judge.get_top_two_abundance_from_list(dbg_vals)
     top1_ganon, top2_ganon = judge.get_top_two_abundance_from_list(ganon_vals)
     
-    # 2. 
     strategy = judge.calculate_decision(top1_ganon, top2_ganon, top1_ggcat, top2_ggcat)
-    
-    # 3. 
+
+    # Scale the integration weight by the unclassified fraction when the
+    # first-stage abundance allocation is selected.
     def tre_weight_calc(tre_file):
         w = 0.0; found = False
         try:
@@ -817,7 +804,6 @@ def _run_threshold_and_mix_for_paired(
 
     tre_w = tre_weight_calc(tre_file)
 
-    # 4. 
     if strategy == "GGCAT":
         weight = 1.0
     else:
@@ -825,7 +811,7 @@ def _run_threshold_and_mix_for_paired(
         
     print(f"[PanTax-DBG] Mixing Strategy: {strategy}, Final Weight: {weight:.6f} (i-logic applied)")
 
-    # ======  ======
+    # Generate the final integrated abundance profile.
     final_tmp = f"{ggcat_prefix}.mix_abundance_prediction.tsv"
     _ts("mix_predictions").run(
         dbg_file=dbg_tmp,

@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
-
 import argparse
 import gzip
 import os
 import sys
 from collections import defaultdict
 
-
-# ======================
-
-# ======================
 
 def read_counts(counts_path):
     counts = defaultdict(float)
@@ -83,10 +77,6 @@ def read_mapping(mapping_path, species_col, path_col):
     return species_to_paths
 
 
-# ======================
-
-# ======================
-
 def run(counts_file,
         mapping_file,
         output_file,
@@ -106,7 +96,7 @@ def run(counts_file,
     species_avg_len = {}
     species_n = {}
 
-    # 
+    # Calculate the mean length of the candidate genomes for each species.
     for sid in counts.keys():
         paths = species_to_paths.get(sid, [])
         if not paths:
@@ -122,7 +112,7 @@ def run(counts_file,
                 if skip_missing_genomes:
                     continue
                 else:
-                    continue  # 
+                    continue
             if p not in genome_len_cache:
                 try:
                     genome_len_cache[p] = fasta_length(p)
@@ -139,7 +129,7 @@ def run(counts_file,
         species_n[sid] = len(lens)
         species_avg_len[sid] = sum(lens) / len(lens)
 
-    #  reads / avg_len
+    # Correct assigned-read counts by mean candidate-genome length.
     weights = {}
     for sid, rc in counts.items():
         L = species_avg_len.get(sid)
@@ -151,7 +141,6 @@ def run(counts_file,
         print("[error] Sum of (reads / avg_len) is zero; nothing to normalize.", file=sys.stderr)
         raise SystemExit(2)
 
-    # 
     with open(output_file, "w", encoding="utf-8") as out:
         out.write("\t".join([
             "species_taxid",
@@ -162,7 +151,6 @@ def run(counts_file,
             "rel_abundance",
         ]) + "\n")
 
-        # 
         for sid in sorted(counts.keys(), key=lambda x: (x not in weights, x)):
             reads = counts[sid]
             n = species_n.get(sid, 0)
@@ -173,10 +161,6 @@ def run(counts_file,
 
     print(f"[info] length-corrected abundance written to: {output_file}", file=sys.stderr)
 
-
-# ======================
-# 
-# ======================
 
 def parse_args():
     ap = argparse.ArgumentParser(

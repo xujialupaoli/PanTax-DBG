@@ -2,13 +2,10 @@
 
 This directory contains a compact paired-end toy example for checking that a PanTax-DBG installation can build a reference database and generate species- and strain-level profiles. The example is intentionally small, so it should be used for a smoke test rather than for benchmarking accuracy or speed.
 
-Run the commands below from the repository root:
+After completing the Conda installation and current-source update described in the main README, run the commands below from the repository root:
 
 ```bash
 cd /path/to/PanTax-DBG
-
-# Make the bundled PanTax-DBG backend tools visible.
-export PATH="$CONDA_PREFIX/libexec/pantax-dbg:$PATH"
 ```
 
 ## Files

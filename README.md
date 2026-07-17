@@ -1,13 +1,10 @@
-
 # PanTax-DBG: species- and strain-level profiling for paired-end short-read metagenomes
 
 [![GitHub release](https://img.shields.io/github/v/release/xujialupaoli/PanTax-DBG)](https://github.com/xujialupaoli/PanTax-DBG/releases)
-[![License](https://img.shields.io/github/license/xujialupaoli/PanTax-DBG)](LICENSE)
-<!-- Enable this badge after the Bioconda package is publicly available.
 [![Bioconda](https://img.shields.io/conda/vn/bioconda/pantax-dbg.svg)](https://anaconda.org/bioconda/pantax-dbg)
--->
+[![License](https://img.shields.io/github/license/xujialupaoli/PanTax-DBG)](LICENSE)
 
-**PanTax-DBG** is a metagenomic profiler for estimating **species-level** and **strain-level** relative abundance from **paired-end short-read sequencing data**. It combines high-recall taxonomic candidate screening with colored de Bruijn graph (DBG) refinement, enabling profiling across low- to high-abundance microbial signals.
+**PanTax-DBG** is a metagenomic profiler for estimating **species-level** and **strain-level** relative abundance from **paired-end short-read sequencing data**. It combines high-recall taxonomic candidate screening with colored compacted de Bruijn graph (ccDBG) refinement, enabling profiling across low- to high-abundance microbial signals.
 
 > **Current public input type:** paired-end short reads (`-r read1.fq[.gz] -r read2.fq[.gz]`).
 
@@ -25,7 +22,7 @@
   - [`exampleDB_input_genomes.txt`](#exampledb_input_genomestxt)
   - [`example_profile_genome_info.txt`](#example_profile_genome_infotxt)
   - [`HRGM2_example.nodes.dmp` and `HRGM2_example.names.dmp`](#hrgm2_examplenodesdmp-and-hrgm2_examplenamesdmp)
-  - [`my_genome_sizes.ncbi.tsv.gz`](#my_genome_sizesncbitasvgz)
+  - [`my_genome_sizes.ncbi.tsv.gz`](#my_genome_sizesncbitsvgz)
 - [Output files](#output-files)
   - [`species_abundance.txt`](#species_abundancetxt)
   - [`strain_abundance.txt`](#strain_abundancetxt)
@@ -40,9 +37,9 @@
 
 ## Installation
 
-### Install from Bioconda
+### Install with Conda
 
-Bioconda recommends using `conda-forge` with higher priority than `bioconda` and enabling strict channel priority. After the package is available in Bioconda:
+PanTax-DBG 0.1.0 is available from Bioconda for Linux. Install it with `conda-forge` ahead of `bioconda` under strict channel priority:
 
 ```bash
 conda create -n pantaxdbg_env pantax-dbg \
@@ -52,21 +49,22 @@ conda create -n pantaxdbg_env pantax-dbg \
 
 conda activate pantaxdbg_env
 
-# Make the bundled PanTax-DBG backend tools visible.
+# PanTax-DBG 0.1.0 stores its native components in a private directory.
 export PATH="$CONDA_PREFIX/libexec/pantax-dbg:$PATH"
 
 pantax-dbg -h
 ```
 
-For general users, the packaged conda installation is recommended because it installs the required compiled components together with the command-line interface. A plain `pip install .` installation only installs the Python wrapper and is not sufficient unless the bundled native backends are also available through `PANTAX_DBG_LIBEXEC`.
-
-If database construction stops because a backend executable cannot be found, the conda environment is active but its bundled backend directory is not on `PATH`. Run:
+The Conda package is the supported installation route because it installs the command-line interface and the required native components together. To use the current GitHub revision, retain the activated Conda environment and update its Python interface from the repository:
 
 ```bash
-export PATH="$CONDA_PREFIX/libexec/pantax-dbg:$PATH"
+git clone https://github.com/xujialupaoli/PanTax-DBG.git
+cd PanTax-DBG
+python -m pip install --no-deps .
+pantax-dbg -h
 ```
 
-and repeat the command. To make this permanent for the environment, the same line can be added to the user's shell startup file or to a conda activation script.
+This second step keeps the native components supplied by Conda and updates only the PanTax-DBG interface and workflow code. A standalone `pip install .` without the preceding Conda installation is not supported.
 
 ---
 
@@ -123,9 +121,6 @@ Run the commands from the repository root:
 
 ```bash
 cd PanTax-DBG
-
-# Make the bundled PanTax-DBG backend tools visible.
-export PATH="$CONDA_PREFIX/libexec/pantax-dbg:$PATH"
 ```
 
 ### 1. Build a reference database
@@ -308,8 +303,8 @@ Example:
 
 ```text
 #species_taxid	min_ungapped_length	max_ungapped_length	expected_ungapped_length	number_of_genomes	method_determined
-9000000530	2052496	2052496	2052496	1	custom
-9000000531	2573894	2573894	2573894	1	custom
+19703	1745244	1762272	1753758	2	custom_example
+21691	1717340	2019581	1868460	2	custom_example
 ```
 
 ---
@@ -331,8 +326,8 @@ Example:
 
 ```text
 speciesID	abundance
-42335	0.06012759102059925
-43549	0.052470189404142255
+19703	0.5158330999999999
+21691	0.4841669
 ```
 
 This is the recommended file for downstream species-level abundance analysis.
@@ -351,8 +346,10 @@ Example:
 
 ```text
 strain_taxid	strain_name	abundance
-9000091645	GENOME127908	0.0001921999
-9000023784	GENOME029482	0.0001633699
+9000023784	GENOME029482	0.2612231743
+9000091645	GENOME127908	0.2546099257
+9000024881	GENOME030794	0.2464849677
+9000135004	GENOME204591	0.2376819323
 ```
 
 This is the recommended file for downstream strain-level abundance analysis.
@@ -365,17 +362,17 @@ A headerless, tab-delimited hierarchical taxonomic abundance profile at non-stra
 | --- | --- |
 | 1 | Taxonomic rank, such as `superkingdom`, `phylum`, `class`, `order`, `family`, `genus`, or `species`. |
 | 2 | Taxonomic identifier. |
-| 3 | Taxonomic lineage represented as taxonomic identifiers separated by `|`. |
+| 3 | Taxonomic lineage represented as taxonomic identifiers separated by pipe characters. |
 | 4 | Taxon name. |
 | 5 | Relative abundance of the taxon. |
 
 Example:
 
 ```text
-no rank	4	1|4	cellular organisms	0.9999999999999999
-superkingdom	5	1|4|5	Archaea	0.0003555697272234092
-phylum	24	1|4|5|24	Thermoplasmatota	0.0003555697272234092
-class	217	1|4|5|24|217	Thermoplasmata	0.0003555697272234092
+no rank	4	1|4	cellular organisms	1.0
+superkingdom	5	1|4|5	Archaea	0.5158330999999999
+phylum	24	1|4|5|24	Thermoplasmatota	0.5158330999999999
+class	217	1|4|5|24|217	Thermoplasmata	0.5158330999999999
 ```
 
 ### `tax_profile_strain.tre`
@@ -386,7 +383,7 @@ A headerless, tab-delimited hierarchical taxonomic profile after strain-level ab
 | --- | --- |
 | 1 | Taxonomic rank, including `strain` where applicable. |
 | 2 | Taxonomic identifier. |
-| 3 | Taxonomic lineage represented as taxonomic identifiers separated by `|`. |
+| 3 | Taxonomic lineage represented as taxonomic identifiers separated by pipe characters. |
 | 4 | Taxon name. |
 | 5 | Support/count field retained in the hierarchical tree representation. |
 | 6 | Support/count field retained in the hierarchical tree representation. |
@@ -397,11 +394,11 @@ A headerless, tab-delimited hierarchical taxonomic profile after strain-level ab
 Example:
 
 ```text
-root	1	1	root	0	0	162083	162083	1.0000000011
-no rank	4	1|4	cellular organisms	0	0	162083	162083	1.0000000011
-superkingdom	5	1|4|5	Archaea	0	0	42	42	0.0003555698
-phylum	24	1|4|5|24	Thermoplasmatota	0	0	42	42	0.0003555698
-class	217	1|4|5|24|217	Thermoplasmata	0	0	42	42	0.0003555698
+root	1	1	root	0	0	240	240	1
+no rank	4	1|4	cellular organisms	0	0	240	240	1
+superkingdom	5	1|4|5	Archaea	0	0	120	120	0.5158331
+phylum	24	1|4|5|24	Thermoplasmatota	0	0	120	120	0.5158331
+class	217	1|4|5|24|217	Thermoplasmata	0	0	120	120	0.5158331
 ```
 
 For most downstream statistical analyses, use `species_abundance.txt` or `strain_abundance.txt`; use the `.tre` files when a hierarchical taxonomic representation is required.
@@ -420,27 +417,27 @@ to view the complete command-line help available in your installed version.
 
 Frequently used options:
 
-| Option | Description |
-| --- | --- |
-| `-r` | Input read file. Supply exactly two paired-end read files by using `-r` twice. |
-| `--db-prefix` | Prefix of a database previously generated by `pantax-dbg build-custom`. |
-| `--ref-info` | Headered reference-genome information table for strain refinement. |
-| `-o`, `--output`, `--out` | Output directory for profiling results. `--out` is kept as a compatibility alias for earlier scripts. |
-| `--threads` | Number of threads used for computation. |
-| `-k` | k-mer size used during graph-based refinement. |
-| `--strain-min-reads` | Minimum read-support threshold applied during strain-level filtering. |
-| `--strain-topk` | Maximum number of candidate strains retained per species in the corresponding refinement step. |
-| `--strain-div` | Divisor used in secondary strain-support filtering. |
-| `--r1-large-n` | Candidate-number threshold used to identify large candidate sets. |
-| `--r1-topk-large` | Number of top candidates retained for large candidate sets. |
-| `--r1-min-abundance` | Minimum abundance threshold used during first-round candidate selection. |
-| `--species-min-abundance` | Minimum abundance threshold for final species-level reporting. |
+| Option | Default | Description |
+| --- | --- | --- |
+| `-r`, `--reads` | Required twice | Input paired-end FASTQ files, supplied in mate order. |
+| `-d`, `--db-prefix` | Required | Prefix of a database generated by `pantax-dbg build-custom`. |
+| `-i`, `--ref-info` | Required | Headered reference-genome information table for ccDBG refinement. |
+| `-o`, `--output` | Required | Output directory for the final profiles. |
+| `-t`, `--threads` | `8` | Number of worker threads. |
+| `-k`, `--kmer-size` | `31` | k-mer size used during ccDBG refinement. |
+| `--strain-min-reads` | `5.0` | Minimum assigned-read support before strain-candidate ranking. |
+| `--strain-topk` | `5` | Maximum number of retained strain candidates per species. |
+| `--strain-div` | `5.0` | Divisor used in secondary strain-support filtering. |
+| `--r1-large-n` | `1000` | Candidate-set size above which large-set top-k filtering is applied. |
+| `--r1-topk-large` | `3` | Number of candidates retained per species in large-set filtering mode. |
+| `--r1-min-abundance` | `0.0` | Minimum first-round species abundance retained for ccDBG refinement. |
+| `--species-min-abundance` | `0.0` | Minimum relative abundance retained in the final species profile. |
 
 ---
 
 ## Temporary files and local scratch space
 
-During graph refinement, PanTax-DBG may create temporary intermediate files. If your installed version exposes `--ggcat-temp-dir`, you can direct temporary graph-building files to local scratch storage:
+During graph refinement, PanTax-DBG may create temporary intermediate files. Use `--ggcat-temp-dir` to direct temporary graph-building files to local scratch storage:
 
 ```bash
 pantax-dbg profile \
@@ -465,7 +462,7 @@ The citation for PanTax-DBG will be updated after publication of the associated 
 ```bibtex
 @software{pantax_dbg_2026,
   title   = {PanTax-DBG: species- and strain-level profiling for paired-end short-read metagenomes},
-  author  = {Xu, Jialu and Luo Group},
+  author  = {Xu, Jialu},
   year    = {2026},
   version = {0.1.0},
   url     = {https://github.com/xujialupaoli/PanTax-DBG}

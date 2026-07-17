@@ -37,7 +37,7 @@ public:
     bool        output_unclassified = false;
     bool        output_single       = false;
 
-    // houjiade========== [Themis speedup] species folding outputs ==========
+    // PanTax-DBG species-folding outputs
     bool        output_species_all    = false;  // write <prefix>.species.all
     bool        output_species_topk   = false;  // write <prefix>.species_top10_strains.tsv
     uint16_t    species_topk          = 10;     // Top-K strains per species
@@ -149,14 +149,13 @@ public:
 
 
 
-        // houjiade
+        // Species-folding outputs require an output prefix.
         if ( output_prefix.empty() )
         {
-            // existing behavior
+            // Disable all file outputs when no prefix is supplied.
             output_lca          = false;
             output_all          = false;
             output_unclassified = false;
-            // NEW: species outputs also require prefix
             output_species_all  = false;
             output_species_topk = false;
         }

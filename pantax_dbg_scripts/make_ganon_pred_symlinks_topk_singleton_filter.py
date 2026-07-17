@@ -210,7 +210,7 @@ def run(ref_info,
         filtered_species[sp] = arr
 
     if not filtered_species:
-        raise SystemExit("[Error] No species were found after filtering. Check threshold or ID consistency (taxid↔ref_info).")
+        raise SystemExit("[Error] No species were found after filtering. Check the threshold and taxid/ref_info consistency.")
 
     # 6) select top-K per species
     selected_records = []  # (species_taxid, strain_taxid, strain_name, new_strain_taxid, genome_path)
@@ -236,7 +236,7 @@ def run(ref_info,
     print(f"[Completed] Top-K mapping table written: {out_tsv_path}")
     print(f"[Statistics] species passed: {len(filtered_species)}; final strains: {len(selected_records)}")
     if dropped_singletons:
-        print(f"[Hint] Dropped singleton-species with abundance ≤ threshold: {dropped_singletons}", file=sys.stderr)
+        print(f"[Hint] Dropped singleton species with abundance at or below the threshold: {dropped_singletons}", file=sys.stderr)
     if not_in_ref:
         print(f"[Note] {not_in_ref} predicted strain_taxid not found in ref_info; skipped.", file=sys.stderr)
     if not_in_species:

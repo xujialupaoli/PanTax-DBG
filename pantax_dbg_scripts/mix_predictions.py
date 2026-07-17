@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
-
 import argparse
 from pathlib import Path
 import pandas as pd
 
 
-# ======================
-
-# ======================
 def load_abundance(filepath: str) -> pd.Series:
     
     df = pd.read_csv(
@@ -22,17 +17,12 @@ def load_abundance(filepath: str) -> pd.Series:
     )
     s = pd.to_numeric(df["val"], errors="coerce").fillna(0.0).astype(float)
     s = s.clip(lower=0.0)         
-    # 
     idx = df["id"].astype(str).str.strip()
     ser = pd.Series(s.values, index=idx)
 
-    # 
     return ser
 
 
-# ======================
-
-# ======================
 def normalize_series(s: pd.Series) -> pd.Series:
     tot = float(s.sum())
     if tot > 0:
@@ -48,9 +38,6 @@ def adjust_ganon(ganon: pd.Series, dbg_series: pd.Series) -> pd.Series:
     return normalize_series(g_sub)
 
 
-# ======================
-
-# ======================
 def hybrid_predict(dbg_series: pd.Series,
                    adjusted_ganon: pd.Series,
                    dbg_weight: float) -> pd.Series:
@@ -77,9 +64,6 @@ def hybrid_predict(dbg_series: pd.Series,
     return hybrid
 
 
-# ======================
-
-# ======================
 def run(dbg_file: str, ganon_file: str, weight: float, output: str):
     if not 0.0 <= weight <= 1.0:
         raise ValueError("The weights must be between 0 and 1.")
@@ -87,23 +71,18 @@ def run(dbg_file: str, ganon_file: str, weight: float, output: str):
     dbg = load_abundance(dbg_file)
     gan = load_abundance(ganon_file)
 
-    # 
     dbg = normalize_series(dbg)
     gan = normalize_series(gan)
 
     gan_adj = adjust_ganon(gan, dbg)
     final = hybrid_predict(dbg, gan_adj, weight)
 
-    # 
     final = final.sort_values(ascending=False)
 
     Path(output).parent.mkdir(parents=True, exist_ok=True)
     final.to_csv(output, sep="\t", header=False)
 
 
-# ======================
-
-# ======================
 def parse_args():
     p = argparse.ArgumentParser(description="Mixed abundance prediction")
     p.add_argument("-d", "--dbgtax", required=True, help="Abundance file (two columns without header TSV)")

@@ -76,13 +76,12 @@ struct Rep
 typedef robin_hood::unordered_map< std::string, Rep >  TRep;
 typedef robin_hood::unordered_map< std::string, Node > TTax;
 
-// ======== [Themis speedup] strain->species mapping & topK support ========
-
-// ======== [Themis speedup] strain->species mapping & topK support ========
-// 说明：
-// - tax 中 node=菌株taxid，沿 parent 一直爬到 rank=="species" 得到 species_taxid
-// - unique_support：该菌株作为唯一候选（read 只有1个match）时的计数
-// - multi_support：read 有多个match时，从候选里取 top-N（multi_pick）个菌株做“近似重频”计数
+// ======== [PanTax-DBG] strain-to-species mapping and top-k support ========
+// A strain taxid is mapped to its species taxid by following parent nodes until
+// a node with rank "species" is reached.
+// unique_support counts reads for which the strain is the sole match.
+// multi_support counts approximate repeated support from the top-N candidate
+// strains (multi_pick) when a read has multiple matches.
 
 struct StrainSupport
 {
@@ -104,7 +103,7 @@ static inline std::string to_species( std::string const& node,
     if ( it == tax.end() ) return node;
     if ( it->second.rank == "species" ) return cur;
 
-    // guard 防止异常环
+    // Bound the traversal to guard against malformed taxonomy cycles.
     for ( size_t guard = 0; guard < 128; ++guard )
     {
         auto it2 = tax.find(cur);
@@ -126,7 +125,7 @@ static inline uint64_t stable_hash( std::string const& readID, std::string const
     std::hash<std::string> h;
     return static_cast<uint64_t>( h(readID + "|" + strainID) );
 }
-// ======== [Themis speedup] END ========
+// ======== [PanTax-DBG] END ========
 
 
 
@@ -685,7 +684,7 @@ void classify( std::vector< Filter< TFilter > >& filters,
                     }
 
                     // ==========================
-                    // [Themis speedup] outputs
+                    // PanTax-DBG species-folding outputs
                     // ==========================
 
                     // (1) original strain-level .all
@@ -1344,7 +1343,7 @@ bool ganon_classify( Config config )
             // if target not found in tax, add node target with parent root
             detail::validate_targets_tax( filters, tax, config.quiet, config.tax_root_node );
         }
-        // [Themis speedup] build strain->species mapping once per hierarchy
+        // Build the PanTax-DBG strain-to-species mapping once per hierarchy.
         detail::TStrain2Species strain2species;
         if ( config.output_species_all || config.output_species_topk )
         {
