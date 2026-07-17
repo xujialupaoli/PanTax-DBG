@@ -9,6 +9,7 @@ pantax_dbg.egg-info/
 /build/
 /dist/
 /Raptor_usr.timestamp
+/example/example_profile_genome_info.local.txt
 conda_build*.log
 *.log
 __pycache__/

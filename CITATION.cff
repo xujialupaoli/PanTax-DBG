@@ -1,11 +1,12 @@
 cff-version: 1.2.0
-title: "PanTax-DBG"
+title: "PanTax-DBG: species- and strain-level profiling for paired-end short-read metagenomes"
 message: "If you use PanTax-DBG, please cite this software."
 type: software
 authors:
   - family-names: "Xu"
     given-names: "Jialu"
 version: "0.1.0"
+date-released: 2026-06-03
 license: "GPL-3.0-or-later"
 repository-code: "https://github.com/xujialupaoli/PanTax-DBG"
 url: "https://github.com/xujialupaoli/PanTax-DBG/releases/tag/v0.1.0"

@@ -49,22 +49,12 @@ conda create -n pantaxdbg_env pantax-dbg \
 
 conda activate pantaxdbg_env
 
-# PanTax-DBG 0.1.0 stores its native components in a private directory.
 export PATH="$CONDA_PREFIX/libexec/pantax-dbg:$PATH"
 
 pantax-dbg -h
 ```
 
-The Conda package is the supported installation route because it installs the command-line interface and the required native components together. To use the current GitHub revision, retain the activated Conda environment and update its Python interface from the repository:
-
-```bash
-git clone https://github.com/xujialupaoli/PanTax-DBG.git
-cd PanTax-DBG
-python -m pip install --no-deps .
-pantax-dbg -h
-```
-
-This second step keeps the native components supplied by Conda and updates only the PanTax-DBG interface and workflow code. A standalone `pip install .` without the preceding Conda installation is not supported.
+The Conda package provides the PanTax-DBG command-line interface and all required runtime components. The commands above activate the environment and verify the installation.
 
 ---
 
@@ -157,6 +147,14 @@ For a large reference collection, database construction may require substantiall
 
 ### 2. Profile paired-end reads
 
+Materialize the example genome paths for the current checkout:
+
+```bash
+awk -v root="$(pwd)" 'BEGIN {FS=OFS="\t"} NR==1 {print; next} {$5=root "/" $5; print}' \
+    example/example_profile_genome_info.txt \
+    > example/example_profile_genome_info.local.txt
+```
+
 ```bash
 mkdir -p example/profile_res
 
@@ -170,7 +168,7 @@ pantax-dbg profile \
     --r1-large-n 100 \
     --r1-topk-large 10 \
     --r1-min-abundance 1e-7 \
-    --ref-info example/example_profile_genome_info.txt \
+    --ref-info example/example_profile_genome_info.local.txt \
     --output example/profile_res \
     --threads 16 \
     -k 31 
@@ -268,7 +266,7 @@ GENOME000067	9000000060	42335	Species_A	example/genome/GENOME000067.fna.gz
 GENOME000081	9000000074	43549	Species_B	example/genome/GENOME000081.fna.gz
 ```
 
-The `--ref-info` table must correspond to the same genome collection and taxonomy used when building the database.
+The `--ref-info` table must correspond to the same genome collection and taxonomy used when building the database. Absolute genome paths are recommended for production analyses. The quick-start command above creates a local copy with absolute paths while leaving the distributed example table unchanged.
 
 ### `HRGM2_example.nodes.dmp` and `HRGM2_example.names.dmp`
 
@@ -311,7 +309,7 @@ Example:
 
 ## Output files
 
-All abundance values shown below are **relative-abundance proportions** rather than percentages. For example, `0.0601` represents approximately `6.01%` relative abundance.
+The primary species and strain abundance tables report relative-abundance proportions. The hierarchical species tree retains the percentage scale of the taxonomic report, whereas the strain-refined tree reports proportions in its final column.
 
 ### `species_abundance.txt`
 
@@ -356,7 +354,7 @@ This is the recommended file for downstream strain-level abundance analysis.
 
 ### `tax_profile.tre`
 
-A headerless, tab-delimited hierarchical taxonomic abundance profile at non-strain ranks.
+A headerless, tab-delimited hierarchical taxonomic abundance profile at non-strain ranks. It retains the nine-column cumulative report format.
 
 | Column | Description |
 | --- | --- |
@@ -364,15 +362,19 @@ A headerless, tab-delimited hierarchical taxonomic abundance profile at non-stra
 | 2 | Taxonomic identifier. |
 | 3 | Taxonomic lineage represented as taxonomic identifiers separated by pipe characters. |
 | 4 | Taxon name. |
-| 5 | Relative abundance of the taxon. |
+| 5 | Number of reads assigned uniquely to the taxon. |
+| 6 | Number of reads assigned non-uniquely to the taxon after redistribution. |
+| 7 | Number of assignments contributed by descendant taxa. |
+| 8 | Cumulative assignments to the taxon and its descendants. |
+| 9 | Cumulative relative abundance on a percentage scale. |
 
 Example:
 
 ```text
-no rank	4	1|4	cellular organisms	1.0
-superkingdom	5	1|4|5	Archaea	0.5158330999999999
-phylum	24	1|4|5|24	Thermoplasmatota	0.5158330999999999
-class	217	1|4|5|24|217	Thermoplasmata	0.5158330999999999
+root	1	1	root	0	0	240	240	100.00000
+no rank	4	1|4	cellular organisms	0	0	240	240	100.00000
+superkingdom	5	1|4|5	Archaea	0	0	120	120	51.58331
+phylum	24	1|4|5|24	Thermoplasmatota	0	0	120	120	51.58331
 ```
 
 ### `tax_profile_strain.tre`
@@ -457,17 +459,21 @@ Using a local scratch filesystem such as `/tmp` can reduce I/O overhead on netwo
 
 ## Citation
 
-The citation for PanTax-DBG will be updated after publication of the associated manuscript. Until then, cite the software release and provide the repository URL:
+PanTax-DBG is currently distributed as versioned research software. If you use it in published work, please cite the software release:
 
 ```bibtex
-@software{pantax_dbg_2026,
+@software{xu_pantax_dbg_2026,
   title   = {PanTax-DBG: species- and strain-level profiling for paired-end short-read metagenomes},
   author  = {Xu, Jialu},
   year    = {2026},
+  month   = {6},
   version = {0.1.0},
-  url     = {https://github.com/xujialupaoli/PanTax-DBG}
+  url     = {https://github.com/xujialupaoli/PanTax-DBG/releases/tag/v0.1.0},
+  license = {GPL-3.0-or-later}
 }
 ```
+
+GitHub also provides APA and BibTeX formats through the **Cite this repository** link. A manuscript citation will be added after publication.
 
 ---
 

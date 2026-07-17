@@ -2,7 +2,7 @@
 
 This directory contains a compact paired-end toy example for checking that a PanTax-DBG installation can build a reference database and generate species- and strain-level profiles. The example is intentionally small, so it should be used for a smoke test rather than for benchmarking accuracy or speed.
 
-After completing the Conda installation and current-source update described in the main README, run the commands below from the repository root:
+After completing the Conda installation described in the main README, run the commands below from the repository root:
 
 ```bash
 cd /path/to/PanTax-DBG
@@ -48,6 +48,14 @@ example/pantaxdbg_DB/pantaxdbg_db
 
 ## 2. Profile the example reads
 
+Materialize the example genome paths for the current checkout:
+
+```bash
+awk -v root="$(pwd)" 'BEGIN {FS=OFS="\t"} NR==1 {print; next} {$5=root "/" $5; print}' \
+    example/example_profile_genome_info.txt \
+    > example/example_profile_genome_info.local.txt
+```
+
 ```bash
 mkdir -p example/profile_res
 
@@ -61,7 +69,7 @@ pantax-dbg profile \
     --r1-large-n 100 \
     --r1-topk-large 10 \
     --r1-min-abundance 1e-7 \
-    --ref-info example/example_profile_genome_info.txt \
+    --ref-info example/example_profile_genome_info.local.txt \
     --output example/profile_res \
     --species-min-abundance 0.0 \
     --threads 16 \

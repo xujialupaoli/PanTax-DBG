@@ -459,11 +459,9 @@ def run_paired(reads, db_prefix, out_prefix,
 
     Path(temp_mix_abundance).unlink(missing_ok=True)
 
-    # The reconstruction step above normally creates the final five-column
-    # species tree. Fall back to the original tree only if reconstruction did
-    # not produce an output file.
+    # Copy the final species-level tree from the first-stage taxonomic report.
     final_species_tre = out_prefix / "tax_profile.tre"
-    if not final_species_tre.exists() and ganon_tre.exists():
+    if ganon_tre.exists():
         shutil.copyfile(ganon_tre, final_species_tre)
 
     # Keep only user-facing final outputs after a successful paired-end run.
